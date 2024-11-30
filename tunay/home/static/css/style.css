@@ -1,0 +1,16 @@
+.header{
+    background-color: rgb(147 114 150);
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    height: 10rem;
+}
+
+.header .logo{
+    border-color: rgb(215 219 21);
+    border-width: 2px;
+    border-radius: 9999px;
+    height: auto;
+    max-width: 100%;
+    border-style: solid;
+}
