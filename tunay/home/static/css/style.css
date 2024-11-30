@@ -6,11 +6,37 @@
     height: 10rem;
 }
 
-.header .logo{
+.header .logo-holder{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.header .logo-holder .logo{
     border-color: rgb(215 219 21);
     border-width: 2px;
     border-radius: 9999px;
-    height: auto;
-    max-width: 100%;
     border-style: solid;
+    height: 9rem;
+}
+
+.header .logo-holder .name-title{
+    font-size: x-large;
+    text-align: left;
+    line-height: 1.75rem;
+    padding-top: 3rem;
+}
+
+.header .logo-holder .name-title .first-name{
+    color: white;
+}
+
+.header .logo-holder  .name-title .last-name{
+    color: rgb(215 219 21);
+    font-weight: bold;
+}
+
+.header .logo-holder .name-title .title{
+    color: white;
+    font-weight: bold;
 }
