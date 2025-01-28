@@ -45,3 +45,18 @@ a, a:hover, a:focus, a:active {
     text-decoration: none;
     color: rgb(147 114 150);
 }
+
+.social-icons {
+    display: flex;
+    gap: 10px; /* İkonlar arası boşluk */
+    margin-top: 10px; /* İkonlar ile yazılar arası boşluk */
+}
+
+.social-icons a {
+    font-size: 24px; /* İkon boyutu */
+    color: rgb(147 114 150); /* İkon rengi */
+}
+
+.social-icons a:hover {
+    color: rgb(215 219 21); /* Hover durumunda ikon rengi */
+}
