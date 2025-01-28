@@ -41,3 +41,7 @@
     font-weight: bold;
 }
 
+a, a:hover, a:focus, a:active {
+    text-decoration: none;
+    color: rgb(147 114 150);
+}
