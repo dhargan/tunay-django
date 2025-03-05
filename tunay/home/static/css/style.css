@@ -1,62 +1,78 @@
-.header{
-    background-color: rgb(147 114 150);
-    text-align: center;
-    justify-content: center;
-    align-items: center;
-    height: 10rem;
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
 }
 
-.header .logo-holder{
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.header-banner {
+    background-color: #8b6b8f;
+    padding: 0;
+    margin-bottom: 1rem;
 }
 
-.header .logo-holder .logo{
-    border-color: rgb(215 219 21);
-    border-width: 2px;
-    border-radius: 9999px;
-    border-style: solid;
-    height: 8rem;
+.highlight {
+    color: #ffd700;
 }
 
-.header .logo-holder .name-title{
-    font-size: x-large;
-    text-align: left;
-    line-height: 1.75rem;
-    padding-top: 3rem;
+.profile-image {
+    width: 150px;
+    height: 150px;
+    border: 5px solid #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
 
-.header .logo-holder .name-title .first-name{
-    color: white;
+.profile-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
-.header .logo-holder  .name-title .last-name{
-    color: rgb(215 219 21);
+.info-section {
+    padding: 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.greeting {
+    font-size: 1.8rem;
     font-weight: bold;
+    color: #333;
+    margin-bottom: 1.5rem;
 }
 
-.header .logo-holder .name-title .title{
-    color: white;
-    font-weight: bold;
+.info-item {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #444;
 }
 
-a, a:hover, a:focus, a:active {
-    text-decoration: none;
-    color: rgb(147 114 150);
+.info-item i {
+    margin-right: 10px;
+    color: #8b6b8f;
 }
 
-.social-icons {
+.social-links {
     display: flex;
-    gap: 10px; /* İkonlar arası boşluk */
-    margin-top: 10px; /* İkonlar ile yazılar arası boşluk */
+    gap: 1rem;
 }
 
-.social-icons a {
-    font-size: 24px; /* İkon boyutu */
-    color: rgb(147 114 150); /* İkon rengi */
+.social-icon {
+    color: #8b6b8f;
+    font-size: 1.5rem;
+    transition: color 0.3s ease;
 }
 
-.social-icons a:hover {
-    color: rgb(215 219 21); /* Hover durumunda ikon rengi */
+.social-icon:hover {
+    color: #ffd700;
+}
+
+@media (max-width: 768px) {
+    .profile-card {
+        margin-bottom: 2rem;
+    }
+
+    .info-section {
+        padding: 1rem;
+    }
 }
