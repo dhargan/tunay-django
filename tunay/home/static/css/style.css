@@ -76,3 +76,18 @@ body {
         padding: 1rem;
     }
 }
+
+
+.josefin-sans-txt {
+  font-family: "Josefin Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+.quicksand-txt {
+  font-family: "Quicksand", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
