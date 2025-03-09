@@ -10,3 +10,6 @@
 __pycache__/
 staticfiles/
 .cursor/
+# SQLite veritabanı
+*.sqlite3
+db.sqlite3
