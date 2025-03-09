@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-$03oipju(awbd6@2nn!&^eaqv83chh8eii%g!gckil^e-gbhn*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['tunay-7b89aa52bacc.herokuapp.com', 'www.tunay.dev']
+ALLOWED_HOSTS = ['tunay-7b89aa52bacc.herokuapp.com', 'www.tunay.dev', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tunay.home',
+    'tunay.pixel_tarot',
 ]
 
 MIDDLEWARE = [
