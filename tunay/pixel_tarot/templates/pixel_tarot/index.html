@@ -4,8 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Tarot</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game',
+            scene: {
+                create: create
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function create() {
+            const text = this.add.text(400, 300, 'pixel-tarot', {
+                fontSize: '64px',
+                fill: '#fff'
+            });
+            text.setOrigin(0.5);
+        }
+    </script>
 </head>
 <body>
-    <h1>pixel-tarot</h1>
+    <div id="game"></div>
 </body>
 </html> 
