@@ -1,5 +1,6 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,26 +9,99 @@
     <script>
         const config = {
             type: Phaser.AUTO,
-            width: 800,
-            height: 600,
+            width: 1024,
+            height: 768,
             parent: 'game',
             scene: {
+                preload: preload,
                 create: create
             }
         };
 
         const game = new Phaser.Game(config);
 
+        function preload() {
+            // Load card front images
+            {% for card in cards %}
+            this.load.image('{{ card.name }}', '{% static card.front_image_url %}');
+            {% endfor %}
+            // Load card back image
+            this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
+        }
+
         function create() {
-            const text = this.add.text(400, 300, 'pixel-tarot', {
-                fontSize: '64px',
-                fill: '#fff'
+            const cards = [
+                {% for card in cards %}
+                {
+                    name: '{{ card.name }}',
+                    isReversed: {{ card.is_reversed|lower }}
+                },
+                {% endfor %}
+            ];
+
+            const scale = 1.0;
+            const cardWidth = 100 * scale;
+            const cardHeight = 160 * scale;
+            const spacing = 20 * scale;
+            const centerX = (config.width / 2) - cardWidth * 1.25;
+            const centerY = config.height / 2;
+
+            // Celtic Cross positions
+            const positions = [
+                { x: centerX, y: centerY, title: "Present Situation", angle: 0 },           // 1. Center
+                { x: centerX, y: centerY, title: "Challenge", angle: 90 }, // 2. Crossing - perfect cross
+                { x: centerX, y: centerY + cardHeight + spacing, title: "Subconscious", angle: 0 }, // 3. Bottom
+                { x: centerX - cardWidth - spacing, y: centerY, title: "Past", angle: 0 }, // 4. Left
+                { x: centerX + cardWidth + spacing, y: centerY, title: "Near Future", angle: 0 }, // 5. Right
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight * 1.5 + spacing, title: "Personal Approach", angle: 0 }, // 6. Right bottom
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight/2, title: "External Influences", angle: 0 }, // 7. Right middle
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight/2, title: "Hopes/Fears", angle: 0 }, // 8. Right middle-top
+                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment/Family", angle: 0 }, // 9. Top
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "Outcome", angle: 0 }  // 10. Right top
+            ];
+
+            // Place cards
+            cards.forEach((cardData, index) => {
+                const pos = positions[index];
+                const card = this.add.image(pos.x, pos.y, cardData.name);
+                
+                // Set card size
+                card.setDisplaySize(cardWidth, cardHeight);
+                
+                // Set base angle for the position
+                card.setAngle(pos.angle);
+                
+                // Add reversed angle if card is reversed
+                if (cardData.isReversed) {
+                    card.setAngle(card.angle + 180);
+                }
+
+                // Make card interactive
+                card.setInteractive();
+                
+                // Hover effect and position info
+                card.on('pointerover', function() {
+                    this.setTint(0xdddddd);
+                    const text = this.scene.add.text(pos.x, pos.y + cardHeight/2 + 10, pos.title, {
+                        fontSize: '14px',
+                        fill: '#fff',
+                        backgroundColor: '#000'
+                    });
+                    text.setOrigin(0.5);
+                    this.positionText = text;
+                });
+                
+                card.on('pointerout', function() {
+                    this.clearTint();
+                    if (this.positionText) {
+                        this.positionText.destroy();
+                    }
+                });
             });
-            text.setOrigin(0.5);
         }
     </script>
 </head>
-<body>
+<body style="background-color: #1a1a1a; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
     <div id="game"></div>
 </body>
 </html> 

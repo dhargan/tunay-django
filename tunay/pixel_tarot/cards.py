@@ -33,11 +33,10 @@ class DeckManager:
         )
         return card
 
-    def pick_unique_cards(self, count=9):
+    def pick_unique_cards(self, count=10):
         if count > len(self.cards):
             raise ValueError(f"Cannot pick {count} unique cards from a deck of {len(self.cards)} cards")
         
-        # Kartları kopyala ve karıştır
         available_cards = self.cards.copy()
         random.shuffle(available_cards)
         
