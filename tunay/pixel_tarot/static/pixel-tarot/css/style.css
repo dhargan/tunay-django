@@ -97,7 +97,7 @@ body {
 .back-button {
     position: absolute;
     left: 20px;
-    top: 50%;
+    top: 30%;
     transform: translateY(-50%);
     color: white;
     text-decoration: none;
