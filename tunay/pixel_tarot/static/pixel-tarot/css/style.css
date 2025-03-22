@@ -97,13 +97,13 @@ body {
 .back-button {
     position: absolute;
     left: 20px;
-    top: 30%;
-    transform: translateY(-50%);
+    top: 20%;
     color: white;
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
+    z-index: 1000;
     font-family: "Quicksand", sans-serif;
     transition: all 0.3s ease;
 }
