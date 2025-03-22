@@ -6,8 +6,4 @@ class Card:
         self.is_reversed = is_reversed
 
     def __str__(self):
-        return f"{self.name} ({'Reversed' if self.is_reversed else 'Upright'})"
-
-
-
-
+        return f"{self.name}"
