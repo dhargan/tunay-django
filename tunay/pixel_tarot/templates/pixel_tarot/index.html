@@ -10,51 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;400;700&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-        }
-
-        .header-banner {
-            background-color: #8b6b8f;
-            padding: 1rem 0;
-            margin-bottom: 1.5rem;
-        }
-
-        .highlight {
-            color: #ffd700;
-        }
-
-        .profile-image {
-            width: 100px;
-            height: 100px;
-            border: 3px solid #fff;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        }
-
-        .josefin-sans-txt {
-            font-family: "Josefin Sans", sans-serif;
-            font-optical-sizing: auto;
-            font-weight: 100;
-            font-style: normal;
-        }
-
-        .quicksand-txt {
-            font-family: "Quicksand", sans-serif;
-            font-optical-sizing: auto;
-            font-weight: 400;
-            font-style: normal;
-        }
-
-        #game-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: calc(100vh - 200px);
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'pixel-tarot/css/style.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script>
         const config = {
