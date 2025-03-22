@@ -88,8 +88,13 @@
 
             // Place cards with animation
             let placedCards = [];
-            cards.forEach((cardData, index) => {
-                const pos = positions[index];
+            
+            // Create placement order array (same as reveal order)
+            const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9]; // Environment/Family (8) will be placed and revealed 6th
+            
+            cardOrder.forEach((cardIndex, index) => {
+                const pos = positions[cardIndex];
+                const cardData = cards[cardIndex];
                 const startPos = getRandomPosition(config.width, config.height);
                 
                 // Create card back first
@@ -101,7 +106,7 @@
                 // Store front image name for later reveal
                 card.frontImage = cardData.name;
                 card.isReversed = cardData.isReversed;
-                placedCards.push(card);
+                placedCards[cardIndex] = card;  // Store in original position for reveal order
 
                 // Animate card after delay
                 this.time.delayedCall(index * 500, () => {
@@ -117,8 +122,10 @@
                             if (index === cards.length - 1) {
                                 // Start revealing cards after a short delay
                                 this.time.delayedCall(1000, () => {
-                                    placedCards.forEach((placedCard, revealIndex) => {
-                                        this.time.delayedCall(revealIndex * 500, () => {
+                                    // Use same order for revealing
+                                    cardOrder.forEach((revealIndex, i) => {
+                                        this.time.delayedCall(i * 500, () => {
+                                            const placedCard = placedCards[revealIndex];
                                             // Flip animation
                                             this.tweens.add({
                                                 targets: placedCard,
