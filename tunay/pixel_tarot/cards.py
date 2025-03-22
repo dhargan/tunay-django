@@ -32,3 +32,23 @@ class DeckManager:
             is_reversed = random.choice([True, False])
         )
         return card
+
+    def pick_unique_cards(self, count=9):
+        if count > len(self.cards):
+            raise ValueError(f"Cannot pick {count} unique cards from a deck of {len(self.cards)} cards")
+        
+        # Kartları kopyala ve karıştır
+        available_cards = self.cards.copy()
+        random.shuffle(available_cards)
+        
+        unique_cards = []
+        while len(unique_cards) < count:
+            card_data = available_cards.pop()
+            card = Card(
+                name=card_data['name'],
+                front_image_url=card_data['front_image_url'],
+                is_reversed=random.choice([True, False])
+            )
+            unique_cards.append(card)
+            
+        return unique_cards

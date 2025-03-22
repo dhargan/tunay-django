@@ -1,6 +1,9 @@
 from django.shortcuts import render
 
-# Create your views here.
+from tunay.pixel_tarot.cards import DeckManager
+
 
 def index(request):
-    return render(request, 'pixel_tarot/index.html')
+    deck = DeckManager()
+    cards = deck.pick_unique_cards(9)
+    return render(request, 'pixel_tarot/index.html', {'cards': cards})
