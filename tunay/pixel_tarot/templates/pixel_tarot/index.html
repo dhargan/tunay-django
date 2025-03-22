@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Tarot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;400;700&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'pixel-tarot/css/style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script>
+        let gameInstance = null;
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game',
+            scene: {
+                preload: preload,
+                create: create
+            },
+            audio: {
+                disableWebAudio: false,
+                noAudio: false
+            }
+        };
+
+        function startGame() {
+            // Hide start screen
+            document.getElementById('start-screen').style.display = 'none';
+            // Start the game
+            gameInstance = new Phaser.Game(config);
+        }
+
+        function preload() {
+            // Load background image
+            this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
+            
+            // Load sound effects
+            this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
+            this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
+            
+            // Load refresh icon
+            this.load.image('refresh', '{% static "pixel-tarot/assets/refresh.png" %}');
+            
+            // Load card front images
+            {% for card in cards %}
+            this.load.image('{{ card.name }}', '{% static card.front_image_url %}');
+            {% endfor %}
+            // Load card back image
+            this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
+        }
+
+        function getRandomPosition(width, height) {
+            // Random position outside the visible area
+            const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+            let x, y;
+            
+            switch(side) {
+                case 0: // top
+                    x = Math.random() * width;
+                    y = -200;
+                    break;
+                case 1: // right
+                    x = width + 200;
+                    y = Math.random() * height;
+                    break;
+                case 2: // bottom
+                    x = Math.random() * width;
+                    y = height + 200;
+                    break;
+                case 3: // left
+                    x = -200;
+                    y = Math.random() * height;
+                    break;
+            }
+            return { x, y };
+        }
+
+        function create() {
+            // Add background
+            const background = this.add.image(config.width/2, config.height/2, 'background');
+            background.setDisplaySize(config.width, config.height);
+            
+            // Add refresh button
+            const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
+            refreshButton.setDisplaySize(55, 55);
+            refreshButton.setInteractive({ useHandCursor: true });
+            refreshButton.on('pointerover', function() {
+                this.setScale(1.1);
+            });
+            refreshButton.on('pointerout', function() {
+                this.setScale(1);
+            });
+            refreshButton.on('pointerdown', function() {
+                // Restart the game
+                gameInstance.destroy(true);
+                gameInstance = new Phaser.Game(config);
+            });
+            
+            // Create sound objects
+            const dealSound = this.sound.add('dealSound', { volume: 0.5 });
+            const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+            
+            // Configure sounds
+            dealSound.setRate(1.0);
+            revealSound.setRate(1.0);
+            
+            const cards = [
+                {% for card in cards %}
+                {
+                    name: '{{ card.name }}',
+                    isReversed: {{ card.is_reversed|lower }}
+                },
+                {% endfor %}
+            ];
+
+            const scale = 0.8; // Reduced scale for smaller game size
+            const cardWidth = 100 * scale;
+            const cardHeight = 160 * scale;
+            const spacing = 20 * scale;
+            const centerX = (config.width / 2) - cardWidth * 1.25;
+            const centerY = config.height / 2;
+
+            // Celtic Cross positions
+            const positions = [
+                { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
+                { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing - perfect cross
+                { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
+                { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
+                { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
+                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
+            ];
+
+            // Place cards with animation
+            let placedCards = [];
+            
+            // Create placement order array (same as reveal order)
+            const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9]; // Environment/Family (8) will be placed and revealed 6th
+            
+            cardOrder.forEach((cardIndex, index) => {
+                const pos = positions[cardIndex];
+                const cardData = cards[cardIndex];
+                const startPos = getRandomPosition(config.width, config.height);
+                
+                // Create card back first
+                const card = this.add.image(startPos.x, startPos.y, 'card_back');
+                card.setDisplaySize(cardWidth, cardHeight);
+                card.setAngle(pos.angle);
+                card.setAlpha(0); // Start invisible
+
+                // Store front image name for later reveal
+                card.frontImage = cardData.name;
+                card.isReversed = cardData.isReversed;
+                placedCards[cardIndex] = card;  // Store in original position for reveal order
+
+                // Animate card after delay
+                this.time.delayedCall(index * 500, () => {
+                    dealSound.play(); // Play deal sound before animation starts
+                    card.setAlpha(1); // Make visible
+                    this.tweens.add({
+                        targets: card,
+                        x: pos.x,
+                        y: pos.y,
+                        ease: 'Power2',
+                        duration: 500,
+                        onComplete: () => {
+                            // If this is the last card placed
+                            if (index === cards.length - 1) {
+                                // Start revealing cards after a short delay
+                                this.time.delayedCall(1000, () => {
+                                    // Use same order for revealing
+                                    cardOrder.forEach((revealIndex, i) => {
+                                        this.time.delayedCall(i * 500, () => {
+                                            const placedCard = placedCards[revealIndex];
+                                            revealSound.play(); // Play reveal sound
+                                            // Flip animation
+                                            this.tweens.add({
+                                                targets: placedCard,
+                                                scaleX: 0,
+                                                duration: 250,
+                                                ease: 'Linear',
+                                                onComplete: () => {
+                                                    // Switch to front image at middle of flip
+                                                    placedCard.setTexture(placedCard.frontImage);
+                                                    placedCard.setDisplaySize(cardWidth, cardHeight);  // Reset size after texture change
+                                                    if (placedCard.isReversed) {
+                                                        placedCard.setAngle(placedCard.angle + 180);
+                                                    }
+                                                    // Complete flip animation
+                                                    this.tweens.add({
+                                                        targets: placedCard,
+                                                        scaleX: 1,
+                                                        duration: 250,
+                                                        ease: 'Linear',
+                                                        onComplete: () => {
+                                                            // Make card interactive after reveal
+                                                            placedCard.setInteractive();
+                                                            placedCard.setDisplaySize(cardWidth, cardHeight);  // Ensure final size is correct
+                                                            
+                                                            // Hover effect and position info
+                                                            placedCard.on('pointerover', function() {
+                                                                this.setTint(0xdddddd);
+                                                                const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                    fontSize: '14px',
+                                                                    fill: '#fff',
+                                                                    backgroundColor: '#000'
+                                                                });
+                                                                text.setOrigin(0.5);
+                                                                this.positionText = text;
+                                                            });
+                                                            
+                                                            placedCard.on('pointerout', function() {
+                                                                this.clearTint();
+                                                                if (this.positionText) {
+                                                                    this.positionText.destroy();
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        });
+                                    });
+                                });
+                            }
+                        }
+                    });
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="header-banner">
+        <div class="container text-center py-2 position-relative">
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </a>
+            <img src="{% static 'img/logo.png' %}" alt="Profile" class="profile-image rounded-circle">
+            <h1 class="mt-2 mb-1 text-white"><span class="josefin-sans-txt">A. TEOMAN</span> <span class="highlight quicksand-txt">UNAY</span></h1>
+            <h2 class="text-white quicksand-txt mb-1">Software Engineer</h2>
+        </div>
+    </div>
+    <div id="game-container" tabindex="0">
+        <div id="game"></div>
+        <div id="start-screen">
+            <h1 class="game-title">Pixel Tarot</h1>
+            <h2 class="game-subtitle">Celtic Cross Tarot Spread</h2>
+            <button id="start-button" class="btn btn-primary btn-lg">Start Reading</button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Focus on game container when page loads
+        window.addEventListener('load', function() {
+            document.getElementById('game-container').focus();
+            document.getElementById('game').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        });
+
+        // Add click event to start button
+        document.getElementById('start-button').addEventListener('click', startGame);
+    </script>
+</body>
+</html> 

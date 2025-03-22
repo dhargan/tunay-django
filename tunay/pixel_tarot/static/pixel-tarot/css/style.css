@@ -1,0 +1,114 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+}
+
+.header-banner {
+    background-color: #8b6b8f;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+}
+
+.highlight {
+    color: #ffd700;
+}
+
+.profile-image {
+    width: 50px;
+    height: 50px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.josefin-sans-txt {
+    font-family: "Josefin Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 100;
+    font-style: normal;
+}
+
+.quicksand-txt {
+    font-family: "Quicksand", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+#game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+    outline: none;
+    tabindex: 0;
+    position: relative;
+}
+
+#start-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    text-align: center;
+}
+
+.game-title {
+    font-family: "Quicksand", sans-serif;
+    font-size: 4rem;
+    color: #8b6b8f;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.game-subtitle {
+    font-family: "Quicksand", sans-serif;
+    font-size: 1.5rem;
+    color: #7a5c7e;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+#start-button {
+    position: relative;
+    background-color: #8b6b8f;
+    border: none;
+    padding: 1rem 2rem;
+    font-family: "Quicksand", sans-serif;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+#start-button:hover {
+    background-color: #7a5c7e;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.back-button {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Quicksand", sans-serif;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    color: #ffd700;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.back-button i {
+    font-size: 20px;
+}
+
+.back-button span {
+    font-size: 16px;
+} 

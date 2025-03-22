@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-
-import tunay.home.views
+from tunay.home import views as home_views
+from tunay.pixel_tarot import views as pixel_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', tunay.home.views.index)
+    path('', home_views.index),  # Ana sayfa için home app'i
+    path('pixel-tarot/', pixel_views.index),  # pixel-tarot app'i için view
 ]
