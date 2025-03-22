@@ -29,6 +29,32 @@
             this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
         }
 
+        function getRandomPosition(width, height) {
+            // Random position outside the visible area
+            const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+            let x, y;
+            
+            switch(side) {
+                case 0: // top
+                    x = Math.random() * width;
+                    y = -200;
+                    break;
+                case 1: // right
+                    x = width + 200;
+                    y = Math.random() * height;
+                    break;
+                case 2: // bottom
+                    x = Math.random() * width;
+                    y = height + 200;
+                    break;
+                case 3: // left
+                    x = -200;
+                    y = Math.random() * height;
+                    break;
+            }
+            return { x, y };
+        }
+
         function create() {
             const cards = [
                 {% for card in cards %}
@@ -60,42 +86,52 @@
                 { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "Outcome", angle: 0 }  // 10. Right top
             ];
 
-            // Place cards
+            // Place cards with animation
             cards.forEach((cardData, index) => {
                 const pos = positions[index];
-                const card = this.add.image(pos.x, pos.y, cardData.name);
+                const startPos = getRandomPosition(config.width, config.height);
                 
-                // Set card size
+                const card = this.add.image(startPos.x, startPos.y, cardData.name);
                 card.setDisplaySize(cardWidth, cardHeight);
-                
-                // Set base angle for the position
                 card.setAngle(pos.angle);
-                
-                // Add reversed angle if card is reversed
                 if (cardData.isReversed) {
                     card.setAngle(card.angle + 180);
                 }
+                card.setAlpha(0); // Start invisible
 
-                // Make card interactive
-                card.setInteractive();
-                
-                // Hover effect and position info
-                card.on('pointerover', function() {
-                    this.setTint(0xdddddd);
-                    const text = this.scene.add.text(pos.x, pos.y + cardHeight/2 + 10, pos.title, {
-                        fontSize: '14px',
-                        fill: '#fff',
-                        backgroundColor: '#000'
+                // Animate card after delay
+                this.time.delayedCall(index * 1000, () => {
+                    card.setAlpha(1); // Make visible
+                    this.tweens.add({
+                        targets: card,
+                        x: pos.x,
+                        y: pos.y,
+                        ease: 'Power2',
+                        duration: 1000,
+                        onComplete: () => {
+                            // Make card interactive after it reaches its position
+                            card.setInteractive();
+                            
+                            // Hover effect and position info
+                            card.on('pointerover', function() {
+                                this.setTint(0xdddddd);
+                                const text = this.scene.add.text(pos.x, pos.y + cardHeight/2 + 10, pos.title, {
+                                    fontSize: '14px',
+                                    fill: '#fff',
+                                    backgroundColor: '#000'
+                                });
+                                text.setOrigin(0.5);
+                                this.positionText = text;
+                            });
+                            
+                            card.on('pointerout', function() {
+                                this.clearTint();
+                                if (this.positionText) {
+                                    this.positionText.destroy();
+                                }
+                            });
+                        }
                     });
-                    text.setOrigin(0.5);
-                    this.positionText = text;
-                });
-                
-                card.on('pointerout', function() {
-                    this.clearTint();
-                    if (this.positionText) {
-                        this.positionText.destroy();
-                    }
                 });
             });
         }
