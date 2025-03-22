@@ -15,6 +15,10 @@
             scene: {
                 preload: preload,
                 create: create
+            },
+            audio: {
+                disableWebAudio: false,
+                noAudio: false
             }
         };
 
@@ -23,6 +27,10 @@
         function preload() {
             // Load background image
             this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
+            
+            // Load sound effects
+            this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
+            this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
             
             // Load card front images
             {% for card in cards %}
@@ -62,6 +70,14 @@
             // Add background
             const background = this.add.image(config.width/2, config.height/2, 'background');
             background.setDisplaySize(config.width, config.height);
+            
+            // Create sound objects
+            const dealSound = this.sound.add('dealSound', { volume: 0.5 });
+            const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+            
+            // Configure sounds
+            dealSound.setRate(1.0);
+            revealSound.setRate(1.0);
             
             const cards = [
                 {% for card in cards %}
@@ -117,6 +133,7 @@
 
                 // Animate card after delay
                 this.time.delayedCall(index * 500, () => {
+                    dealSound.play(); // Play deal sound before animation starts
                     card.setAlpha(1); // Make visible
                     this.tweens.add({
                         targets: card,
@@ -133,6 +150,7 @@
                                     cardOrder.forEach((revealIndex, i) => {
                                         this.time.delayedCall(i * 500, () => {
                                             const placedCard = placedCards[revealIndex];
+                                            revealSound.play(); // Play reveal sound
                                             // Flip animation
                                             this.tweens.add({
                                                 targets: placedCard,
