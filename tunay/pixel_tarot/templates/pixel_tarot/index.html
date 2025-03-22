@@ -87,17 +87,21 @@
             ];
 
             // Place cards with animation
+            let placedCards = [];
             cards.forEach((cardData, index) => {
                 const pos = positions[index];
                 const startPos = getRandomPosition(config.width, config.height);
                 
-                const card = this.add.image(startPos.x, startPos.y, cardData.name);
+                // Create card back first
+                const card = this.add.image(startPos.x, startPos.y, 'card_back');
                 card.setDisplaySize(cardWidth, cardHeight);
                 card.setAngle(pos.angle);
-                if (cardData.isReversed) {
-                    card.setAngle(card.angle + 180);
-                }
                 card.setAlpha(0); // Start invisible
+
+                // Store front image name for later reveal
+                card.frontImage = cardData.name;
+                card.isReversed = cardData.isReversed;
+                placedCards.push(card);
 
                 // Animate card after delay
                 this.time.delayedCall(index * 500, () => {
@@ -109,27 +113,62 @@
                         ease: 'Power2',
                         duration: 500,
                         onComplete: () => {
-                            // Make card interactive after it reaches its position
-                            card.setInteractive();
-                            
-                            // Hover effect and position info
-                            card.on('pointerover', function() {
-                                this.setTint(0xdddddd);
-                                const text = this.scene.add.text(pos.x, pos.y + cardHeight/2 + 10, pos.title, {
-                                    fontSize: '14px',
-                                    fill: '#fff',
-                                    backgroundColor: '#000'
+                            // If this is the last card placed
+                            if (index === cards.length - 1) {
+                                // Start revealing cards after a short delay
+                                this.time.delayedCall(1000, () => {
+                                    placedCards.forEach((placedCard, revealIndex) => {
+                                        this.time.delayedCall(revealIndex * 500, () => {
+                                            // Flip animation
+                                            this.tweens.add({
+                                                targets: placedCard,
+                                                scaleX: 0,
+                                                duration: 250,
+                                                ease: 'Linear',
+                                                onComplete: () => {
+                                                    // Switch to front image at middle of flip
+                                                    placedCard.setTexture(placedCard.frontImage);
+                                                    placedCard.setDisplaySize(cardWidth, cardHeight);  // Reset size after texture change
+                                                    if (placedCard.isReversed) {
+                                                        placedCard.setAngle(placedCard.angle + 180);
+                                                    }
+                                                    // Complete flip animation
+                                                    this.tweens.add({
+                                                        targets: placedCard,
+                                                        scaleX: 1,
+                                                        duration: 250,
+                                                        ease: 'Linear',
+                                                        onComplete: () => {
+                                                            // Make card interactive after reveal
+                                                            placedCard.setInteractive();
+                                                            placedCard.setDisplaySize(cardWidth, cardHeight);  // Ensure final size is correct
+                                                            
+                                                            // Hover effect and position info
+                                                            placedCard.on('pointerover', function() {
+                                                                this.setTint(0xdddddd);
+                                                                const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                    fontSize: '14px',
+                                                                    fill: '#fff',
+                                                                    backgroundColor: '#000'
+                                                                });
+                                                                text.setOrigin(0.5);
+                                                                this.positionText = text;
+                                                            });
+                                                            
+                                                            placedCard.on('pointerout', function() {
+                                                                this.clearTint();
+                                                                if (this.positionText) {
+                                                                    this.positionText.destroy();
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        });
+                                    });
                                 });
-                                text.setOrigin(0.5);
-                                this.positionText = text;
-                            });
-                            
-                            card.on('pointerout', function() {
-                                this.clearTint();
-                                if (this.positionText) {
-                                    this.positionText.destroy();
-                                }
-                            });
+                            }
                         }
                     });
                 });
