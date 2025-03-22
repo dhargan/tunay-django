@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="{% static 'pixel-tarot/css/style.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script>
+        let gameInstance = null;
+
         const config = {
             type: Phaser.AUTO,
             width: 1024,
@@ -28,7 +30,12 @@
             }
         };
 
-        const game = new Phaser.Game(config);
+        function startGame() {
+            // Hide start screen
+            document.getElementById('start-screen').style.display = 'none';
+            // Start the game
+            gameInstance = new Phaser.Game(config);
+        }
 
         function preload() {
             // Load background image
@@ -37,6 +44,9 @@
             // Load sound effects
             this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
             this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
+            
+            // Load refresh icon
+            this.load.image('refresh', '{% static "pixel-tarot/assets/refresh.png" %}');
             
             // Load card front images
             {% for card in cards %}
@@ -77,6 +87,22 @@
             const background = this.add.image(config.width/2, config.height/2, 'background');
             background.setDisplaySize(config.width, config.height);
             
+            // Add refresh button
+            const refreshButton = this.add.image(config.width - 30, 30, 'refresh');
+            refreshButton.setDisplaySize(55, 55);
+            refreshButton.setInteractive({ useHandCursor: true });
+            refreshButton.on('pointerover', function() {
+                this.setScale(1.1);
+            });
+            refreshButton.on('pointerout', function() {
+                this.setScale(1);
+            });
+            refreshButton.on('pointerdown', function() {
+                // Restart the game
+                gameInstance.destroy(true);
+                gameInstance = new Phaser.Game(config);
+            });
+            
             // Create sound objects
             const dealSound = this.sound.add('dealSound', { volume: 0.5 });
             const revealSound = this.sound.add('revealSound', { volume: 0.5 });
@@ -103,16 +129,16 @@
 
             // Celtic Cross positions
             const positions = [
-                { x: centerX, y: centerY, title: "Present Situation", angle: 0 },           // 1. Center
-                { x: centerX, y: centerY, title: "Challenge", angle: 90 }, // 2. Crossing - perfect cross
-                { x: centerX, y: centerY + cardHeight + spacing, title: "Subconscious", angle: 0 }, // 3. Bottom
-                { x: centerX - cardWidth - spacing, y: centerY, title: "Past", angle: 0 }, // 4. Left
-                { x: centerX + cardWidth + spacing, y: centerY, title: "Near Future", angle: 0 }, // 5. Right
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight * 1.5 + spacing, title: "Personal Approach", angle: 0 }, // 6. Right bottom
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight/2, title: "External Influences", angle: 0 }, // 7. Right middle
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight/2, title: "Hopes/Fears", angle: 0 }, // 8. Right middle-top
-                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment/Family", angle: 0 }, // 9. Top
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "Outcome", angle: 0 }  // 10. Right top
+                { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
+                { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing - perfect cross
+                { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
+                { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
+                { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
+                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
+                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
             ];
 
             // Place cards with animation
@@ -222,10 +248,28 @@
             <h2 class="text-white quicksand-txt">Software Engineer</h2>
         </div>
     </div>
-    <div id="game-container">
+    <div id="game-container" tabindex="0">
         <div id="game"></div>
+        <div id="start-screen">
+            <h1 class="game-title">Pixel Tarot</h1>
+            <h2 class="game-subtitle">Celtic Cross Tarot Spread</h2>
+            <button id="start-button" class="btn btn-primary btn-lg">Start Reading</button>
+        </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Focus on game container when page loads
+        window.addEventListener('load', function() {
+            document.getElementById('game-container').focus();
+            document.getElementById('game').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        });
+
+        // Add click event to start button
+        document.getElementById('start-button').addEventListener('click', startGame);
+    </script>
 </body>
 </html> 

@@ -40,4 +40,48 @@ body {
     justify-content: center;
     align-items: center;
     min-height: calc(100vh - 200px);
+    outline: none;
+    tabindex: 0;
+    position: relative;
+}
+
+#start-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    text-align: center;
+}
+
+.game-title {
+    font-family: "Quicksand", sans-serif;
+    font-size: 4rem;
+    color: #8b6b8f;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.game-subtitle {
+    font-family: "Quicksand", sans-serif;
+    font-size: 1.5rem;
+    color: #7a5c7e;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+#start-button {
+    position: relative;
+    background-color: #8b6b8f;
+    border: none;
+    padding: 1rem 2rem;
+    font-family: "Quicksand", sans-serif;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+#start-button:hover {
+    background-color: #7a5c7e;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
 } 
