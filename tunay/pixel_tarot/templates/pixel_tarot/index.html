@@ -18,7 +18,7 @@
         const config = {
             type: Phaser.AUTO,
             width: 600,
-            height: 640,
+            height: 800,
             parent: 'game',
             scene: {
                 preload: preload,
@@ -158,25 +158,25 @@
                 {% endfor %}
             ];
 
-            const scale = 0.8; // Increased scale back to 0.8
+            const scale = 1.0; // Increased scale to 1.0
             const cardWidth = 100 * scale;
             const cardHeight = 160 * scale;
             const spacing = 15 * scale;
-            const centerX = (config.width / 2) - cardWidth; // Adjusted center position
+            const centerX = (config.width / 2) - cardWidth; // Center position
             const centerY = config.height / 2;
 
-            // Celtic Cross positions - original layout with adjusted scale
+            // Celtic Cross positions - adjusted for larger cards
             const positions = [
                 { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
                 { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing
                 { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
                 { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
                 { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
-                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
-                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
-                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
                 { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
-                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
             ];
 
             // Place cards with animation
