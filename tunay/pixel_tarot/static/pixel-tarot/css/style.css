@@ -84,4 +84,31 @@ body {
     background-color: #7a5c7e;
     transform: scale(1.1);
     box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.back-button {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Quicksand", sans-serif;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    color: #ffd700;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.back-button i {
+    font-size: 20px;
+}
+
+.back-button span {
+    font-size: 16px;
 } 

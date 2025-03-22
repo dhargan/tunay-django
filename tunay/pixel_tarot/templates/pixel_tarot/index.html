@@ -17,8 +17,8 @@
 
         const config = {
             type: Phaser.AUTO,
-            width: 1024,
-            height: 768,
+            width: 800,
+            height: 600,
             parent: 'game',
             scene: {
                 preload: preload,
@@ -88,7 +88,7 @@
             background.setDisplaySize(config.width, config.height);
             
             // Add refresh button
-            const refreshButton = this.add.image(config.width - 30, 30, 'refresh');
+            const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
             refreshButton.setDisplaySize(55, 55);
             refreshButton.setInteractive({ useHandCursor: true });
             refreshButton.on('pointerover', function() {
@@ -120,7 +120,7 @@
                 {% endfor %}
             ];
 
-            const scale = 1.0;
+            const scale = 0.8; // Reduced scale for smaller game size
             const cardWidth = 100 * scale;
             const cardHeight = 160 * scale;
             const spacing = 20 * scale;
@@ -242,7 +242,11 @@
 </head>
 <body>
     <div class="header-banner">
-        <div class="container text-center py-2">
+        <div class="container text-center py-2 position-relative">
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </a>
             <img src="{% static 'img/logo.png' %}" alt="Profile" class="profile-image rounded-circle">
             <h1 class="mt-2 mb-1 text-white"><span class="josefin-sans-txt">A. TEOMAN</span> <span class="highlight quicksand-txt">UNAY</span></h1>
             <h2 class="text-white quicksand-txt mb-1">Software Engineer</h2>
