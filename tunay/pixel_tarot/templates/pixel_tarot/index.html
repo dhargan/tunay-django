@@ -17,8 +17,8 @@
 
         const config = {
             type: Phaser.AUTO,
-            width: 800,
-            height: 600,
+            width: 600,
+            height: 800,
             parent: 'game',
             scene: {
                 preload: preload,
@@ -36,6 +36,44 @@
             // Start the game
             gameInstance = new Phaser.Game(config);
         }
+
+        function getGameDimensions() {
+            const width = 800;
+            const height = 600;
+            const windowRatio = window.innerWidth / window.innerHeight;
+            const gameRatio = width / height;
+            
+            if (windowRatio < gameRatio) {
+                // Window is taller than game ratio
+                const scale = window.innerWidth / width;
+                return {
+                    width: width * scale,
+                    height: height * scale,
+                    scale: scale
+                };
+            } else {
+                // Window is wider than game ratio
+                const scale = window.innerHeight / height;
+                return {
+                    width: width * scale,
+                    height: height * scale,
+                    scale: scale
+                };
+            }
+        }
+
+        // Update game container size
+        function updateGameSize() {
+            const gameDim = getGameDimensions();
+            document.getElementById('game').style.width = gameDim.width + 'px';
+            document.getElementById('game').style.height = gameDim.height + 'px';
+            return gameDim.scale;
+        }
+
+        // Initial size update
+        window.addEventListener('load', updateGameSize);
+        // Update size on window resize
+        window.addEventListener('resize', updateGameSize);
 
         function preload() {
             // Load background image
@@ -120,25 +158,25 @@
                 {% endfor %}
             ];
 
-            const scale = 0.8; // Reduced scale for smaller game size
+            const scale = 0.8; // Increased scale back to 0.8
             const cardWidth = 100 * scale;
             const cardHeight = 160 * scale;
-            const spacing = 20 * scale;
-            const centerX = (config.width / 2) - cardWidth * 1.25;
+            const spacing = 15 * scale;
+            const centerX = (config.width / 2) - cardWidth; // Adjusted center position
             const centerY = config.height / 2;
 
-            // Celtic Cross positions
+            // Celtic Cross positions - original layout with adjusted scale
             const positions = [
                 { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
-                { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing - perfect cross
+                { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing
                 { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
                 { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
                 { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
+                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
+                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
+                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
                 { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
-                { x: centerX + cardWidth * 2.5 + spacing * 3, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
+                { x: centerX + cardWidth * 2.2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
             ];
 
             // Place cards with animation

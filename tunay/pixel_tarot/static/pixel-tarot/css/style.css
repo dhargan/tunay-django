@@ -45,6 +45,12 @@ body {
     position: relative;
 }
 
+#game {
+    max-width: 100%;
+    max-height: 100vh;
+    margin-left: 60px;
+}
+
 #start-screen {
     position: absolute;
     top: 50%;
