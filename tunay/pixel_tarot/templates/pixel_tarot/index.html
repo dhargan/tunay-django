@@ -21,6 +21,9 @@
         const game = new Phaser.Game(config);
 
         function preload() {
+            // Load background image
+            this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
+            
             // Load card front images
             {% for card in cards %}
             this.load.image('{{ card.name }}', '{% static card.front_image_url %}');
@@ -56,6 +59,10 @@
         }
 
         function create() {
+            // Add background
+            const background = this.add.image(config.width/2, config.height/2, 'background');
+            background.setDisplaySize(config.width, config.height);
+            
             const cards = [
                 {% for card in cards %}
                 {
