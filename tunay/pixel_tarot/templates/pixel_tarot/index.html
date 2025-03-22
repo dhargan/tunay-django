@@ -100,14 +100,14 @@
                 card.setAlpha(0); // Start invisible
 
                 // Animate card after delay
-                this.time.delayedCall(index * 1000, () => {
+                this.time.delayedCall(index * 500, () => {
                     card.setAlpha(1); // Make visible
                     this.tweens.add({
                         targets: card,
                         x: pos.x,
                         y: pos.y,
                         ease: 'Power2',
-                        duration: 1000,
+                        duration: 500,
                         onComplete: () => {
                             // Make card interactive after it reaches its position
                             card.setInteractive();
