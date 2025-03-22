@@ -43,12 +43,14 @@ body {
     outline: none;
     tabindex: 0;
     position: relative;
+    width: 100%;
 }
 
 #game {
     max-width: 100%;
     max-height: 100vh;
-    margin-left: 60px;
+    display: flex;
+    justify-content: center;
 }
 
 #start-screen {
