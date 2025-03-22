@@ -6,8 +6,8 @@ body {
 
 .header-banner {
     background-color: #8b6b8f;
-    padding: 1rem 0;
-    margin-bottom: 1.5rem;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
 }
 
 .highlight {
@@ -15,9 +15,9 @@ body {
 }
 
 .profile-image {
-    width: 100px;
-    height: 100px;
-    border: 3px solid #fff;
+    width: 50px;
+    height: 50px;
+    border: 2px solid #fff;
     box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
 
