@@ -36,12 +36,10 @@
             }
         };
 
-        function startGame() {
-            // Hide start screen
-            document.getElementById('start-screen').style.display = 'none';
-            // Start the game
+        // Initialize game directly
+        window.onload = function() {
             gameInstance = new Phaser.Game(config);
-        }
+        };
 
         function getGameDimensions() {
             const width = 600;
@@ -98,6 +96,10 @@
             {% endfor %}
             // Load card back image
             this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
+
+            // Preload mainmenu image
+            this.load.image('mainmenu', '{% static "pixel-tarot/assets/mainmenu.png" %}');
+            this.load.start();
         }
 
         function getRandomPosition(width, height) {
@@ -127,217 +129,270 @@
         }
 
         function create() {
-            // Add background
-            const background = this.add.image(config.width/2, config.height/2, 'background');
-            background.setDisplaySize(config.width, config.height);
-            
-            // Add refresh button
-            const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
-            refreshButton.setDisplaySize(55, 55);
-            refreshButton.setInteractive({ 
-                hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
-                hitAreaCallback: Phaser.Geom.Circle.Contains,
-                useHandCursor: true 
-            });
-            refreshButton.on('pointerover', function() {
-                this.setScale(1.1);
-            });
-            refreshButton.on('pointerout', function() {
-                this.setScale(1);
-            });
-            refreshButton.on('pointerdown', function() {
-                location.reload();
-            });
+            // Create start screen scene
+            const startBackground = this.add.image(config.width/2, config.height/2, 'mainmenu');
+            startBackground.setDisplaySize(config.width, config.height);
 
-            // Create interpret button (initially hidden)
-            const buttonWidth = 120;
-            const buttonHeight = 40;
-            const buttonX = 50;
-            const buttonY = config.height - 50;
+            // Create start button
+            const startButtonWidth = 160;
+            const startButtonHeight = 50;
+            const startButtonX = config.width/2 - startButtonWidth/2;
+            const startButtonY = config.height * 0.55;
 
-            const buttonBackground = this.add.graphics();
-            buttonBackground.fillStyle(0x808080, 0.6);
-            buttonBackground.lineStyle(2, 0x808080, 1);
-            buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-            buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-            buttonBackground.setVisible(false);
+            const startButtonBackground = this.add.graphics();
+            startButtonBackground.fillStyle(0x000000, 0.6);
+            startButtonBackground.lineStyle(2, 0xffd700, 1);
+            startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+            startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
 
-            const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
+            const startButton = this.add.text(config.width/2, startButtonY + startButtonHeight/2, 'Start Reading', {
                 fontFamily: 'W95FA',
-                fontSize: '20px',
-                color: '#d3d3d3',
+                fontSize: '24px',
+                color: '#ffd700',
                 padding: { x: 20, y: 10 }
             });
-            interpretButton.setOrigin(0.5, 0.5);
-            interpretButton.setVisible(false);
-            interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
-            interpretButton.setInteractive({ useHandCursor: true });
+            startButton.setOrigin(0.5, 0.5);
+            startButton.setShadow(2, 2, 'rgba(0,0,0,0.8)', 2);
+            startButton.setInteractive({ useHandCursor: true });
 
-            let hoverText = null;
-            let hoverBackground = null;
-            interpretButton.on('pointerover', function() {
-                const hoverX = this.x + buttonWidth/2 + 20;
-                const hoverY = this.y;
+            // Add hover effect
+            startButton.on('pointerover', function() {
+                startButtonBackground.clear();
+                startButtonBackground.fillStyle(0x000000, 0.8);
+                startButtonBackground.lineStyle(2, 0xfff700, 1);
+                startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+                startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+                this.setColor('#fff700');
+            });
+
+            startButton.on('pointerout', function() {
+                startButtonBackground.clear();
+                startButtonBackground.fillStyle(0x000000, 0.6);
+                startButtonBackground.lineStyle(2, 0xffd700, 1);
+                startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+                startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+                this.setColor('#ffd700');
+            });
+
+            // Start game on click
+            startButton.on('pointerdown', () => {
+                startBackground.destroy();
+                startButton.destroy();
+                startButtonBackground.destroy();
                 
-                hoverBackground = this.scene.add.graphics();
-                hoverBackground.fillStyle(0x000000, 0.8);
-                hoverBackground.fillRoundedRect(hoverX, hoverY - 15, 180, 30, 8);
+                // Add game background
+                const background = this.add.image(config.width/2, config.height/2, 'background');
+                background.setDisplaySize(config.width, config.height);
                 
-                hoverText = this.scene.add.text(hoverX + 90, hoverY, 'Currently Unavailable', {
-                    fontFamily: 'W95FA',
-                    fontSize: '16px',
-                    color: '#d3d3d3',
-                    padding: { x: 10, y: 5 }
+                // Continue with the rest of the game creation...
+                // Add refresh button
+                const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
+                refreshButton.setDisplaySize(55, 55);
+                refreshButton.setInteractive({ 
+                    hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
+                    hitAreaCallback: Phaser.Geom.Circle.Contains,
+                    useHandCursor: true 
                 });
-                hoverText.setOrigin(0.5, 0.5);
-            });
+                refreshButton.on('pointerover', function() {
+                    this.setScale(1.1);
+                });
+                refreshButton.on('pointerout', function() {
+                    this.setScale(1);
+                });
+                refreshButton.on('pointerdown', function() {
+                    location.reload();
+                });
 
-            interpretButton.on('pointerout', function() {
-                if (hoverText) {
-                    hoverText.destroy();
-                    hoverText = null;
-                }
-                if (hoverBackground) {
-                    hoverBackground.destroy();
-                    hoverBackground = null;
-                }
-            });
-            
-            // Create sound objects
-            const dealSound = this.sound.add('dealSound', { volume: 0.5 });
-            const revealSound = this.sound.add('revealSound', { volume: 0.5 });
-            
-            // Configure sounds
-            dealSound.setRate(1.0);
-            revealSound.setRate(1.0);
-            
-            const cards = [
-                {% for card in cards %}
-                {
-                    name: '{{ card.name }}',
-                    isReversed: {{ card.is_reversed|lower }}
-                },
-                {% endfor %}
-            ];
+                // Create interpret button (initially hidden)
+                const buttonWidth = 120;
+                const buttonHeight = 40;
+                const buttonX = 50;
+                const buttonY = config.height - 50;
 
-            const scale = 1.0; // Increased scale to 1.0
-            const cardWidth = 100 * scale;
-            const cardHeight = 160 * scale;
-            const spacing = 15 * scale;
-            const centerX = (config.width / 2) - cardWidth; // Center position
-            const centerY = config.height / 2;
+                const buttonBackground = this.add.graphics();
+                buttonBackground.fillStyle(0x808080, 0.6);
+                buttonBackground.lineStyle(2, 0x808080, 1);
+                buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+                buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+                buttonBackground.setVisible(false);
 
-            // Celtic Cross positions - adjusted for larger cards
-            const positions = [
-                { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
-                { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing
-                { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
-                { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
-                { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
-                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
-            ];
+                const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
+                    fontFamily: 'W95FA',
+                    fontSize: '20px',
+                    color: '#d3d3d3',
+                    padding: { x: 20, y: 10 }
+                });
+                interpretButton.setOrigin(0.5, 0.5);
+                interpretButton.setVisible(false);
+                interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
+                interpretButton.setInteractive({ useHandCursor: true });
 
-            // Place cards with animation
-            let placedCards = [];
-            
-            // Create placement order array (same as reveal order)
-            const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9]; // Environment/Family (8) will be placed and revealed 6th
-            
-            cardOrder.forEach((cardIndex, index) => {
-                const pos = positions[cardIndex];
-                const cardData = cards[cardIndex];
-                const startPos = getRandomPosition(config.width, config.height);
+                let hoverText = null;
+                let hoverBackground = null;
+                interpretButton.on('pointerover', function() {
+                    const hoverX = this.x + buttonWidth/2 + 20;
+                    const hoverY = this.y;
+                    
+                    hoverBackground = this.scene.add.graphics();
+                    hoverBackground.fillStyle(0x000000, 0.8);
+                    hoverBackground.fillRoundedRect(hoverX, hoverY - 15, 180, 30, 8);
+                    
+                    hoverText = this.scene.add.text(hoverX + 90, hoverY, 'Currently Unavailable', {
+                        fontFamily: 'W95FA',
+                        fontSize: '16px',
+                        color: '#d3d3d3',
+                        padding: { x: 10, y: 5 }
+                    });
+                    hoverText.setOrigin(0.5, 0.5);
+                });
+
+                interpretButton.on('pointerout', function() {
+                    if (hoverText) {
+                        hoverText.destroy();
+                        hoverText = null;
+                    }
+                    if (hoverBackground) {
+                        hoverBackground.destroy();
+                        hoverBackground = null;
+                    }
+                });
                 
-                // Create card back first
-                const card = this.add.image(startPos.x, startPos.y, 'card_back');
-                card.setDisplaySize(cardWidth, cardHeight);
-                card.setAngle(pos.angle);
-                card.setAlpha(0); // Start invisible
+                // Create sound objects
+                const dealSound = this.sound.add('dealSound', { volume: 0.5 });
+                const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+                
+                // Configure sounds
+                dealSound.setRate(1.0);
+                revealSound.setRate(1.0);
+                
+                const cards = [
+                    {% for card in cards %}
+                    {
+                        name: '{{ card.name }}',
+                        isReversed: {{ card.is_reversed|lower }}
+                    },
+                    {% endfor %}
+                ];
 
-                // Store front image name for later reveal
-                card.frontImage = cardData.name;
-                card.isReversed = cardData.isReversed;
-                placedCards[cardIndex] = card;  // Store in original position for reveal order
+                const scale = 1.0; // Increased scale to 1.0
+                const cardWidth = 100 * scale;
+                const cardHeight = 160 * scale;
+                const spacing = 15 * scale;
+                const centerX = (config.width / 2) - cardWidth; // Center position
+                const centerY = config.height / 2;
 
-                // Animate card after delay
-                this.time.delayedCall(index * 500, () => {
-                    dealSound.play(); // Play deal sound before animation starts
-                    card.setAlpha(1); // Make visible
-                    this.tweens.add({
-                        targets: card,
-                        x: pos.x,
-                        y: pos.y,
-                        ease: 'Power2',
-                        duration: 500,
-                        onComplete: () => {
-                            // If this is the last card placed
-                            if (index === cards.length - 1) {
-                                // Start revealing cards after a short delay
-                                this.time.delayedCall(1000, () => {
-                                    // Use same order for revealing
-                                    cardOrder.forEach((revealIndex, i) => {
-                                        this.time.delayedCall(i * 500, () => {
-                                            const placedCard = placedCards[revealIndex];
-                                            revealSound.play(); // Play reveal sound
-                                            // Flip animation
-                                            this.tweens.add({
-                                                targets: placedCard,
-                                                scaleX: 0,
-                                                duration: 250,
-                                                ease: 'Linear',
-                                                onComplete: () => {
-                                                    placedCard.setTexture(placedCard.frontImage);
-                                                    placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                    if (placedCard.isReversed) {
-                                                        placedCard.setAngle(placedCard.angle + 180);
-                                                    }
-                                                    this.tweens.add({
-                                                        targets: placedCard,
-                                                        scaleX: 1,
-                                                        duration: 250,
-                                                        ease: 'Linear',
-                                                        onComplete: () => {
-                                                            placedCard.setInteractive();
-                                                            placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                            
-                                                            placedCard.on('pointerover', function() {
-                                                                this.setTint(0xdddddd);
-                                                                const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
-                                                                    fontSize: '14px',
-                                                                    fill: '#fff',
-                                                                    backgroundColor: '#000'
-                                                                });
-                                                                text.setOrigin(0.5);
-                                                                this.positionText = text;
-                                                            });
-                                                            
-                                                            placedCard.on('pointerout', function() {
-                                                                this.clearTint();
-                                                                if (this.positionText) {
-                                                                    this.positionText.destroy();
-                                                                }
-                                                            });
+                // Celtic Cross positions - adjusted for larger cards
+                const positions = [
+                    { x: centerX, y: centerY, title: "The Present", angle: 0 },           // 1. Center
+                    { x: centerX, y: centerY, title: "The Challenge", angle: 90 }, // 2. Crossing
+                    { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 }, // 3. Bottom
+                    { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 }, // 4. Left
+                    { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 }, // 5. Right
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 }, // 6. Right bottom
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 }, // 7. Right middle
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 }, // 8. Right middle-top
+                    { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 }, // 9. Top
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }  // 10. Right top
+                ];
 
-                                                            // Show interpret button after last card is revealed
-                                                            if (revealIndex === cardOrder[cardOrder.length - 1]) {
-                                                                this.time.delayedCall(500, () => {
-                                                                    buttonBackground.setVisible(true);
-                                                                    interpretButton.setVisible(true);
-                                                                });
-                                                            }
+                // Place cards with animation
+                let placedCards = [];
+                
+                // Create placement order array (same as reveal order)
+                const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9]; // Environment/Family (8) will be placed and revealed 6th
+                
+                cardOrder.forEach((cardIndex, index) => {
+                    const pos = positions[cardIndex];
+                    const cardData = cards[cardIndex];
+                    const startPos = getRandomPosition(config.width, config.height);
+                    
+                    // Create card back first
+                    const card = this.add.image(startPos.x, startPos.y, 'card_back');
+                    card.setDisplaySize(cardWidth, cardHeight);
+                    card.setAngle(pos.angle);
+                    card.setAlpha(0); // Start invisible
+
+                    // Store front image name for later reveal
+                    card.frontImage = cardData.name;
+                    card.isReversed = cardData.isReversed;
+                    placedCards[cardIndex] = card;  // Store in original position for reveal order
+
+                    // Animate card after delay
+                    this.time.delayedCall(index * 500, () => {
+                        dealSound.play(); // Play deal sound before animation starts
+                        card.setAlpha(1); // Make visible
+                        this.tweens.add({
+                            targets: card,
+                            x: pos.x,
+                            y: pos.y,
+                            ease: 'Power2',
+                            duration: 500,
+                            onComplete: () => {
+                                // If this is the last card placed
+                                if (index === cards.length - 1) {
+                                    // Start revealing cards after a short delay
+                                    this.time.delayedCall(1000, () => {
+                                        // Use same order for revealing
+                                        cardOrder.forEach((revealIndex, i) => {
+                                            this.time.delayedCall(i * 500, () => {
+                                                const placedCard = placedCards[revealIndex];
+                                                revealSound.play(); // Play reveal sound
+                                                // Flip animation
+                                                this.tweens.add({
+                                                    targets: placedCard,
+                                                    scaleX: 0,
+                                                    duration: 250,
+                                                    ease: 'Linear',
+                                                    onComplete: () => {
+                                                        placedCard.setTexture(placedCard.frontImage);
+                                                        placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                        if (placedCard.isReversed) {
+                                                            placedCard.setAngle(placedCard.angle + 180);
                                                         }
-                                                    });
-                                                }
+                                                        this.tweens.add({
+                                                            targets: placedCard,
+                                                            scaleX: 1,
+                                                            duration: 250,
+                                                            ease: 'Linear',
+                                                            onComplete: () => {
+                                                                placedCard.setInteractive();
+                                                                placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                                
+                                                                placedCard.on('pointerover', function() {
+                                                                    this.setTint(0xdddddd);
+                                                                    const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                        fontSize: '14px',
+                                                                        fill: '#fff',
+                                                                        backgroundColor: '#000'
+                                                                    });
+                                                                    text.setOrigin(0.5);
+                                                                    this.positionText = text;
+                                                                });
+                                                                
+                                                                placedCard.on('pointerout', function() {
+                                                                    this.clearTint();
+                                                                    if (this.positionText) {
+                                                                        this.positionText.destroy();
+                                                                    }
+                                                                });
+
+                                                                // Show interpret button after last card is revealed
+                                                                if (revealIndex === cardOrder[cardOrder.length - 1]) {
+                                                                    this.time.delayedCall(500, () => {
+                                                                        buttonBackground.setVisible(true);
+                                                                        interpretButton.setVisible(true);
+                                                                    });
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+                                                });
                                             });
                                         });
                                     });
-                                });
+                                }
                             }
-                        }
+                        });
                     });
                 });
             });
@@ -358,15 +413,8 @@
     </div>
     <div id="game-container">
         <div id="game"></div>
-        <div id="start-screen" style="background-image: url('{% static 'pixel-tarot/assets/mainmenu.png' %}');">
-            <button id="start-button">Start Reading</button>
-        </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Add click event to start button
-        document.getElementById('start-button').addEventListener('click', startGame);
-    </script>
 </body>
 </html> 
