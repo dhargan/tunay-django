@@ -134,7 +134,11 @@
             // Add refresh button
             const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
             refreshButton.setDisplaySize(55, 55);
-            refreshButton.setInteractive({ useHandCursor: true });
+            refreshButton.setInteractive({ 
+                hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
+                hitAreaCallback: Phaser.Geom.Circle.Contains,
+                useHandCursor: true 
+            });
             refreshButton.on('pointerover', function() {
                 this.setScale(1.1);
             });
@@ -142,9 +146,7 @@
                 this.setScale(1);
             });
             refreshButton.on('pointerdown', function() {
-                // Restart the game
-                gameInstance.destroy(true);
-                gameInstance = new Phaser.Game(config);
+                location.reload();
             });
             
             // Create sound objects
