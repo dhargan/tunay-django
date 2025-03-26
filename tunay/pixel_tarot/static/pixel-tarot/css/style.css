@@ -57,8 +57,12 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    width: 600px;
+    height: 800px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
     z-index: 1000;
-    text-align: center;
 }
 
 .game-title {
@@ -78,19 +82,34 @@ body {
 }
 
 #start-button {
-    position: relative;
-    background-color: #8b6b8f;
-    border: none;
-    padding: 1rem 2rem;
-    font-family: "Quicksand", sans-serif;
-    font-size: 1.5rem;
-    transition: all 0.3s ease;
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+    padding: 12px 30px;
+    font-family: 'W95FA', sans-serif;
+    font-size: 24px;
+    color: #ffd700;
+    text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1001;
+    box-shadow: 
+        0 0 0 2px rgba(0,0,0,0.8),
+        0 0 10px rgba(255,215,0,0.4);
 }
 
 #start-button:hover {
-    background-color: #7a5c7e;
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    transform: translate(-50%, -50%) scale(1.1);
+    color: #fff700;
+    border-color: #fff700;
+    background-color: rgba(0, 0, 0, 0.8);
+    box-shadow: 
+        0 0 0 2px rgba(0,0,0,0.8),
+        0 0 15px rgba(255,215,0,0.6);
 }
 
 .back-button {
@@ -133,8 +152,7 @@ body {
         min-height: 35px;
     }
 
-    #game-container {
-        padding-top: 145px;
+    #game-container {        
         margin: 0;
         min-height: calc(100vh - 35px);
         display: flex;
@@ -166,5 +184,19 @@ body {
 
     .back-button span {
         display: none;
+    }
+
+    #start-screen {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 600px;
+        max-height: 800px;
+        background-size: contain;
+    }
+
+    #start-button {
+        font-size: 20px;
+        padding: 10px 25px;
+        top: 47%;
     }
 } 
