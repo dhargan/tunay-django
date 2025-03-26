@@ -148,6 +148,60 @@
             refreshButton.on('pointerdown', function() {
                 location.reload();
             });
+
+            // Create interpret button (initially hidden)
+            const buttonWidth = 120;
+            const buttonHeight = 40;
+            const buttonX = 50;
+            const buttonY = config.height - 50;
+
+            const buttonBackground = this.add.graphics();
+            buttonBackground.fillStyle(0x808080, 0.6);
+            buttonBackground.lineStyle(2, 0x808080, 1);
+            buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+            buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+            buttonBackground.setVisible(false);
+
+            const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
+                fontFamily: 'W95FA',
+                fontSize: '20px',
+                color: '#d3d3d3',
+                padding: { x: 20, y: 10 }
+            });
+            interpretButton.setOrigin(0.5, 0.5);
+            interpretButton.setVisible(false);
+            interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
+            interpretButton.setInteractive({ useHandCursor: true });
+
+            let hoverText = null;
+            let hoverBackground = null;
+            interpretButton.on('pointerover', function() {
+                const hoverX = this.x + buttonWidth/2 + 20;
+                const hoverY = this.y;
+                
+                hoverBackground = this.scene.add.graphics();
+                hoverBackground.fillStyle(0x000000, 0.8);
+                hoverBackground.fillRoundedRect(hoverX, hoverY - 15, 180, 30, 8);
+                
+                hoverText = this.scene.add.text(hoverX + 90, hoverY, 'Currently Unavailable', {
+                    fontFamily: 'W95FA',
+                    fontSize: '16px',
+                    color: '#d3d3d3',
+                    padding: { x: 10, y: 5 }
+                });
+                hoverText.setOrigin(0.5, 0.5);
+            });
+
+            interpretButton.on('pointerout', function() {
+                if (hoverText) {
+                    hoverText.destroy();
+                    hoverText = null;
+                }
+                if (hoverBackground) {
+                    hoverBackground.destroy();
+                    hoverBackground = null;
+                }
+            });
             
             // Create sound objects
             const dealSound = this.sound.add('dealSound', { volume: 0.5 });
@@ -236,32 +290,28 @@
                                                 duration: 250,
                                                 ease: 'Linear',
                                                 onComplete: () => {
-                                                    // Switch to front image at middle of flip
                                                     placedCard.setTexture(placedCard.frontImage);
-                                                    placedCard.setDisplaySize(cardWidth, cardHeight);  // Reset size after texture change
+                                                    placedCard.setDisplaySize(cardWidth, cardHeight);
                                                     if (placedCard.isReversed) {
                                                         placedCard.setAngle(placedCard.angle + 180);
                                                     }
-                                                    // Complete flip animation
                                                     this.tweens.add({
                                                         targets: placedCard,
                                                         scaleX: 1,
                                                         duration: 250,
                                                         ease: 'Linear',
                                                         onComplete: () => {
-                                                            // Make card interactive after reveal
                                                             placedCard.setInteractive();
-                                                            placedCard.setDisplaySize(cardWidth, cardHeight);  // Ensure final size is correct
+                                                            placedCard.setDisplaySize(cardWidth, cardHeight);
                                                             
-                                                            // Hover effect and position info
                                                             placedCard.on('pointerover', function() {
                                                                 this.setTint(0xdddddd);
                                                                 const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
                                                                     fontSize: '14px',
                                                                     fill: '#fff',
                                                                     backgroundColor: '#000'
-            });
-            text.setOrigin(0.5);
+                                                                });
+                                                                text.setOrigin(0.5);
                                                                 this.positionText = text;
                                                             });
                                                             
@@ -271,6 +321,14 @@
                                                                     this.positionText.destroy();
                                                                 }
                                                             });
+
+                                                            // Show interpret button after last card is revealed
+                                                            if (revealIndex === cardOrder[cardOrder.length - 1]) {
+                                                                this.time.delayedCall(500, () => {
+                                                                    buttonBackground.setVisible(true);
+                                                                    interpretButton.setVisible(true);
+                                                                });
+                                                            }
                                                         }
                                                     });
                                                 }
