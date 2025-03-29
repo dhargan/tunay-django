@@ -86,7 +86,7 @@ body {
     #game-container {
         width: 100%;
         max-width: 600px;
-        padding-top: 35px;
+        margin-top: -70px;
     }
 
     #game {
