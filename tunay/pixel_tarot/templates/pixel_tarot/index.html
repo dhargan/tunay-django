@@ -84,6 +84,7 @@
         function preload() {
             // Background and UI
             this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
+            this.load.image('background-2', '{% static "pixel-tarot/assets/background-2.png" %}');
             this.load.image('refresh', '{% static "pixel-tarot/assets/refresh.png" %}');
             this.load.image('mainmenu', '{% static "pixel-tarot/assets/mainmenu.png" %}');
             
@@ -192,10 +193,14 @@
         }
 
         function createQuestionScreen() {
-            // Create question screen
-            const questionBackground = this.add.graphics();
-            questionBackground.fillStyle(0x000000, 0.8);
-            questionBackground.fillRect(0, 0, config.width, config.height);
+            // Create question screen with background
+            const questionBackground = this.add.image(config.width/2, config.height/2, 'background-2')
+                .setDisplaySize(config.width, config.height);
+
+            // Add semi-transparent overlay
+            const overlay = this.add.graphics();
+            overlay.fillStyle(0x000000, 0.7);
+            overlay.fillRect(0, 0, config.width, config.height);
 
             // Add title text
             const titleText = this.add.text(config.width/2, 150, 'Enter your question for the Tarot', {
