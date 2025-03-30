@@ -23,8 +23,7 @@
     <link rel="stylesheet" href="{% static 'pixel-tarot/css/style.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script>
-        let gameInstance = null;
-
+        // Oyun konfigürasyonu
         const config = {
             type: Phaser.AUTO,
             width: 600,
@@ -38,11 +37,9 @@
                 disableWebAudio: false,
                 noAudio: false
             },
-            // Add DOM plugin support
             dom: {
                 createContainer: true
             },
-            // Enable DOM elements
             plugins: {
                 scene: [{
                     key: 'PhaserDOM',
@@ -52,11 +49,11 @@
             }
         };
 
-        // Initialize game directly
-        window.onload = function() {
-            gameInstance = new Phaser.Game(config);
-        };
+        // Oyun başlatma
+        let gameInstance = null;
+        window.onload = () => gameInstance = new Phaser.Game(config);
 
+        // Responsive ayarları
         function getGameDimensions() {
             const width = 600;
             const height = 800;
@@ -64,58 +61,108 @@
             const gameRatio = width / height;
             
             if (windowRatio < gameRatio) {
-                // Window is taller than game ratio
                 const scale = window.innerWidth / width;
-                return {
-                    width: width * scale,
-                    height: height * scale,
-                    scale: scale
-                };
+                return { width: width * scale, height: height * scale, scale };
             } else {
-                // Window is wider than game ratio
                 const scale = window.innerHeight / height;
-                return {
-                    width: width * scale,
-                    height: height * scale,
-                    scale: scale
-                };
+                return { width: width * scale, height: height * scale, scale };
             }
         }
 
-        // Update game container size
         function updateGameSize() {
             const gameDim = getGameDimensions();
-            document.getElementById('game').style.width = gameDim.width + 'px';
-            document.getElementById('game').style.height = gameDim.height + 'px';
+            const gameElement = document.getElementById('game');
+            gameElement.style.width = gameDim.width + 'px';
+            gameElement.style.height = gameDim.height + 'px';
             return gameDim.scale;
         }
 
-        // Initial size update
         window.addEventListener('load', updateGameSize);
-        // Update size on window resize
         window.addEventListener('resize', updateGameSize);
 
+        // Asset yükleme
         function preload() {
-            // Load background image
+            // Arkaplan ve UI
             this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
-            
-            // Load sound effects
-            this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
-            this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
-            
-            // Load refresh icon
             this.load.image('refresh', '{% static "pixel-tarot/assets/refresh.png" %}');
+            this.load.image('mainmenu', '{% static "pixel-tarot/assets/mainmenu.png" %}');
             
-            // Load card front images
+            // Kartlar
+            this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
             {% for card in cards %}
             this.load.image('{{ card.name }}', '{% static card.front_image_url %}');
             {% endfor %}
-            // Load card back image
-            this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
+            
+            // Sesler
+            this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
+            this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
+        }
 
-            // Preload mainmenu image
-            this.load.image('mainmenu', '{% static "pixel-tarot/assets/mainmenu.png" %}');
-            this.load.start();
+        // Kart pozisyonları ve oyun mantığı
+        function create() {
+            createStartScreen.call(this);
+        }
+
+        // Ana menü ekranı
+        function createStartScreen() {
+            const startBackground = this.add.image(config.width/2, config.height/2, 'mainmenu')
+                .setDisplaySize(config.width, config.height);
+
+            createStartButton.call(this, () => {
+                startBackground.destroy();
+                createQuestionScreen.call(this);
+            });
+        }
+
+        // Başlat butonu
+        function createStartButton(onClick) {
+            const buttonConfig = {
+                width: 160,
+                height: 50,
+                x: config.width/2 - 80,
+                y: config.height * 0.55
+            };
+
+            const background = this.add.graphics()
+                .fillStyle(0x000000, 0.6)
+                .lineStyle(2, 0xffd700, 1)
+                .fillRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8)
+                .strokeRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8);
+
+            const button = this.add.text(config.width/2, buttonConfig.y + buttonConfig.height/2, 'Start Reading', {
+                fontFamily: 'W95FA',
+                fontSize: '24px',
+                color: '#ffd700',
+                padding: { x: 20, y: 10 }
+            })
+            .setOrigin(0.5, 0.5)
+            .setShadow(2, 2, 'rgba(0,0,0,0.8)', 2)
+            .setInteractive({ useHandCursor: true });
+
+            // Hover efektleri
+            button.on('pointerover', () => {
+                background.clear()
+                    .fillStyle(0x000000, 0.8)
+                    .lineStyle(2, 0xfff700, 1)
+                    .fillRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8)
+                    .strokeRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8);
+                button.setColor('#fff700');
+            });
+
+            button.on('pointerout', () => {
+                background.clear()
+                    .fillStyle(0x000000, 0.6)
+                    .lineStyle(2, 0xffd700, 1)
+                    .fillRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8)
+                    .strokeRoundedRect(buttonConfig.x, buttonConfig.y, buttonConfig.width, buttonConfig.height, 8);
+                button.setColor('#ffd700');
+            });
+
+            button.on('pointerdown', () => {
+                background.destroy();
+                button.destroy();
+                onClick();
+            });
         }
 
         function getRandomPosition(width, height) {
@@ -144,343 +191,291 @@
             return { x, y };
         }
 
-        function create() {
-            // Create start screen scene
-            const startBackground = this.add.image(config.width/2, config.height/2, 'mainmenu');
-            startBackground.setDisplaySize(config.width, config.height);
+        function createQuestionScreen() {
+            // Create question screen
+            const questionBackground = this.add.graphics();
+            questionBackground.fillStyle(0x000000, 0.8);
+            questionBackground.fillRect(0, 0, config.width, config.height);
 
-            // Create start button
-            const startButtonWidth = 160;
-            const startButtonHeight = 50;
-            const startButtonX = config.width/2 - startButtonWidth/2;
-            const startButtonY = config.height * 0.55;
+            // Add title text
+            const titleText = this.add.text(config.width/2, 150, 'Enter your question for the Tarot', {
+                fontFamily: 'W95FA',
+                fontSize: '28px',
+                color: '#ffd700',
+                align: 'center'
+            });
+            titleText.setOrigin(0.5);
 
-            const startButtonBackground = this.add.graphics();
-            startButtonBackground.fillStyle(0x000000, 0.6);
-            startButtonBackground.lineStyle(2, 0xffd700, 1);
-            startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
-            startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+            // Add disclaimer
+            const disclaimer = this.add.text(config.width/2, 200, 'Frame your question thoughtfully.\nBe specific but avoid yes/no questions.\nFocus on guidance and insight.', {
+                fontFamily: 'W95FA',
+                fontSize: '16px',
+                color: '#ffffff',
+                align: 'center',
+                lineSpacing: 10
+            });
+            disclaimer.setOrigin(0.5);
 
-            const startButton = this.add.text(config.width/2, startButtonY + startButtonHeight/2, 'Start Reading', {
+            // Create text input
+            const textInput = document.createElement('textarea');
+            textInput.maxLength = 200;
+            textInput.style = 'width: 400px; height: 100px; padding: 10px; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffd700; border-radius: 8px; font-family: W95FA; font-size: 16px;';
+            textInput.placeholder = 'Type your question here...';
+
+            const inputElement = this.add.dom(config.width/2, 350, textInput);
+            
+            // Character counter
+            const charCounter = this.add.text(config.width/2 + 150, 400, '0/200', {
+                    fontFamily: 'W95FA',
+                fontSize: '14px',
+                color: '#ffffff'
+            });
+
+            textInput.addEventListener('input', () => {
+                charCounter.setText(`${textInput.value.length}/200`);
+            });
+
+            // Create consult button
+            const consultButtonWidth = 200;
+            const consultButtonHeight = 50;
+            const consultButtonX = config.width/2 - consultButtonWidth/2;
+            const consultButtonY = 450;
+
+            const consultButtonBackground = this.add.graphics();
+            consultButtonBackground.fillStyle(0x000000, 0.6);
+            consultButtonBackground.lineStyle(2, 0xffd700, 1);
+            consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
+            consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
+
+            const consultButton = this.add.text(config.width/2, consultButtonY + consultButtonHeight/2, 'Consult the Tarot', {
                 fontFamily: 'W95FA',
                 fontSize: '24px',
                 color: '#ffd700',
                 padding: { x: 20, y: 10 }
             });
-            startButton.setOrigin(0.5, 0.5);
-            startButton.setShadow(2, 2, 'rgba(0,0,0,0.8)', 2);
-            startButton.setInteractive({ useHandCursor: true });
+            consultButton.setOrigin(0.5, 0.5);
+            consultButton.setInteractive({ useHandCursor: true });
 
-            // Add hover effect
-            startButton.on('pointerover', function() {
-                startButtonBackground.clear();
-                startButtonBackground.fillStyle(0x000000, 0.8);
-                startButtonBackground.lineStyle(2, 0xfff700, 1);
-                startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
-                startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
+            // Add hover effects for consult button
+            consultButton.on('pointerover', function() {
+                consultButtonBackground.clear();
+                consultButtonBackground.fillStyle(0x000000, 0.8);
+                consultButtonBackground.lineStyle(2, 0xfff700, 1);
+                consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
+                consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
                 this.setColor('#fff700');
             });
 
-            startButton.on('pointerout', function() {
-                startButtonBackground.clear();
-                startButtonBackground.fillStyle(0x000000, 0.6);
-                startButtonBackground.lineStyle(2, 0xffd700, 1);
-                startButtonBackground.fillRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
-                startButtonBackground.strokeRoundedRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 8);
-                this.setColor('#ffd700');
-            });
-
-            // Start game on click
-            startButton.on('pointerdown', () => {
-                startBackground.destroy();
-                startButton.destroy();
-                startButtonBackground.destroy();
-                
-                // Create question screen
-                const questionBackground = this.add.graphics();
-                questionBackground.fillStyle(0x000000, 0.8);
-                questionBackground.fillRect(0, 0, config.width, config.height);
-
-                // Add title text
-                const titleText = this.add.text(config.width/2, 150, 'Enter your question for the Tarot', {
-                    fontFamily: 'W95FA',
-                    fontSize: '28px',
-                    color: '#ffd700',
-                    align: 'center'
-                });
-                titleText.setOrigin(0.5);
-
-                // Add disclaimer
-                const disclaimer = this.add.text(config.width/2, 200, 'Frame your question thoughtfully.\nBe specific but avoid yes/no questions.\nFocus on guidance and insight.', {
-                    fontFamily: 'W95FA',
-                    fontSize: '16px',
-                    color: '#ffffff',
-                    align: 'center',
-                    lineSpacing: 10
-                });
-                disclaimer.setOrigin(0.5);
-
-                // Create text input
-                const textInput = document.createElement('textarea');
-                textInput.maxLength = 200;
-                textInput.style = 'width: 400px; height: 100px; padding: 10px; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffd700; border-radius: 8px; font-family: W95FA; font-size: 16px;';
-                textInput.placeholder = 'Type your question here...';
-
-                const inputElement = this.add.dom(config.width/2, 350, textInput);
-                
-                // Character counter
-                const charCounter = this.add.text(config.width/2 + 150, 400, '0/200', {
-                        fontFamily: 'W95FA',
-                    fontSize: '14px',
-                    color: '#ffffff'
-                });
-
-                textInput.addEventListener('input', () => {
-                    charCounter.setText(`${textInput.value.length}/200`);
-                });
-
-                // Create consult button
-                const consultButtonWidth = 200;
-                const consultButtonHeight = 50;
-                const consultButtonX = config.width/2 - consultButtonWidth/2;
-                const consultButtonY = 450;
-
-                const consultButtonBackground = this.add.graphics();
+            consultButton.on('pointerout', function() {
+                consultButtonBackground.clear();
                 consultButtonBackground.fillStyle(0x000000, 0.6);
                 consultButtonBackground.lineStyle(2, 0xffd700, 1);
                 consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
                 consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
+                this.setColor('#ffd700');
+            });
 
-                const consultButton = this.add.text(config.width/2, consultButtonY + consultButtonHeight/2, 'Consult the Tarot', {
+            // Store question and start reading when consult button is clicked
+            consultButton.on('pointerdown', () => {
+                const tarotQuestion = textInput.value.trim();
+                if (!tarotQuestion) {
+                    // Show error if question is empty
+                    const errorText = this.add.text(config.width/2, 520, 'Please enter your question first', {
+                        fontFamily: 'W95FA',
+                        fontSize: '16px',
+                        color: '#ff0000'
+                    });
+                    errorText.setOrigin(0.5);
+                    this.time.delayedCall(2000, () => errorText.destroy());
+                    return;
+                }
+
+                // Store question for later use
+                this.tarotQuestion = tarotQuestion;
+
+                // Clean up question screen
+                questionBackground.destroy();
+                titleText.destroy();
+                disclaimer.destroy();
+                inputElement.destroy();
+                charCounter.destroy();
+                consultButton.destroy();
+                consultButtonBackground.destroy();
+
+                // Add game background and continue with card dealing
+                const background = this.add.image(config.width/2, config.height/2, 'background');
+                background.setDisplaySize(config.width, config.height);
+
+                // Add refresh button
+                const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
+                refreshButton.setDisplaySize(55, 55);
+                refreshButton.setInteractive({ 
+                    hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
+                    hitAreaCallback: Phaser.Geom.Circle.Contains,
+                    useHandCursor: true 
+                });
+                refreshButton.on('pointerover', function() {
+                    this.setScale(1.1);
+                });
+                refreshButton.on('pointerout', function() {
+                    this.setScale(1);
+                });
+                refreshButton.on('pointerdown', function() {
+                    location.reload();
+                });
+
+                // Create interpret button (initially hidden)
+                const buttonWidth = 120;
+                const buttonHeight = 40;
+                const buttonX = 50;
+                const buttonY = config.height - 50;
+
+                const buttonBackground = this.add.graphics();
+                buttonBackground.fillStyle(0x808080, 0.6);
+                buttonBackground.lineStyle(2, 0x808080, 1);
+                buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+                buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+                buttonBackground.setVisible(false);
+
+                const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
                     fontFamily: 'W95FA',
-                    fontSize: '24px',
-                    color: '#ffd700',
+                    fontSize: '20px',
+                    color: '#d3d3d3',
                     padding: { x: 20, y: 10 }
                 });
-                consultButton.setOrigin(0.5, 0.5);
-                consultButton.setInteractive({ useHandCursor: true });
+                interpretButton.setOrigin(0.5, 0.5);
+                interpretButton.setVisible(false);
+                interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
+                interpretButton.setInteractive({ useHandCursor: true });
 
-                // Add hover effects for consult button
-                consultButton.on('pointerover', function() {
-                    consultButtonBackground.clear();
-                    consultButtonBackground.fillStyle(0x000000, 0.8);
-                    consultButtonBackground.lineStyle(2, 0xfff700, 1);
-                    consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                    consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                    this.setColor('#fff700');
-                });
+                // Create sound objects
+                const dealSound = this.sound.add('dealSound', { volume: 0.5 });
+                const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+                
+                // Configure sounds
+                dealSound.setRate(1.0);
+                revealSound.setRate(1.0);
+                
+                const cards = [
+                    {% for card in cards %}
+                    {
+                        name: '{{ card.name }}',
+                        isReversed: {{ card.is_reversed|lower }}
+                    },
+                    {% endfor %}
+                ];
 
-                consultButton.on('pointerout', function() {
-                    consultButtonBackground.clear();
-                    consultButtonBackground.fillStyle(0x000000, 0.6);
-                    consultButtonBackground.lineStyle(2, 0xffd700, 1);
-                    consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                    consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                    this.setColor('#ffd700');
-                });
+                const scale = 1.0;
+                const cardWidth = 100 * scale;
+                const cardHeight = 160 * scale;
+                const spacing = 15 * scale;
+                const centerX = (config.width / 2) - cardWidth;
+                const centerY = config.height / 2;
 
-                // Store question and start reading when consult button is clicked
-                consultButton.on('pointerdown', () => {
-                    const tarotQuestion = textInput.value.trim();
-                    if (!tarotQuestion) {
-                        // Show error if question is empty
-                        const errorText = this.add.text(config.width/2, 520, 'Please enter your question first', {
-                            fontFamily: 'W95FA',
-                            fontSize: '16px',
-                            color: '#ff0000'
-                        });
-                        errorText.setOrigin(0.5);
-                        this.time.delayedCall(2000, () => errorText.destroy());
-                        return;
-                    }
+                // Celtic Cross positions
+                const positions = [
+                    { x: centerX, y: centerY, title: "The Present", angle: 0 },
+                    { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
+                    { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
+                    { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
+                    { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
+                    { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
+                ];
 
-                    // Store question for later use
-                    this.tarotQuestion = tarotQuestion;
-
-                    // Clean up question screen
-                    questionBackground.destroy();
-                    titleText.destroy();
-                    disclaimer.destroy();
-                    inputElement.destroy();
-                    charCounter.destroy();
-                    consultButton.destroy();
-                    consultButtonBackground.destroy();
-
-                    // Add game background and continue with card dealing
-                    const background = this.add.image(config.width/2, config.height/2, 'background');
-                    background.setDisplaySize(config.width, config.height);
-
-                    // Add refresh button
-                    const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
-                    refreshButton.setDisplaySize(55, 55);
-                    refreshButton.setInteractive({ 
-                        hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
-                        hitAreaCallback: Phaser.Geom.Circle.Contains,
-                        useHandCursor: true 
-                    });
-                    refreshButton.on('pointerover', function() {
-                        this.setScale(1.1);
-                    });
-                    refreshButton.on('pointerout', function() {
-                        this.setScale(1);
-                    });
-                    refreshButton.on('pointerdown', function() {
-                        location.reload();
-                    });
-
-                    // Create interpret button (initially hidden)
-                    const buttonWidth = 120;
-                    const buttonHeight = 40;
-                    const buttonX = 50;
-                    const buttonY = config.height - 50;
-
-                    const buttonBackground = this.add.graphics();
-                    buttonBackground.fillStyle(0x808080, 0.6);
-                    buttonBackground.lineStyle(2, 0x808080, 1);
-                    buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-                    buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-                    buttonBackground.setVisible(false);
-
-                    const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
-                        fontFamily: 'W95FA',
-                        fontSize: '20px',
-                        color: '#d3d3d3',
-                        padding: { x: 20, y: 10 }
-                    });
-                    interpretButton.setOrigin(0.5, 0.5);
-                    interpretButton.setVisible(false);
-                    interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
-                    interpretButton.setInteractive({ useHandCursor: true });
-
-                    // Create sound objects
-                    const dealSound = this.sound.add('dealSound', { volume: 0.5 });
-                    const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+                // Place cards with animation
+                let placedCards = [];
+                
+                // Create placement order array
+                const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
+                
+                cardOrder.forEach((cardIndex, index) => {
+                    const pos = positions[cardIndex];
+                    const cardData = cards[cardIndex];
+                    const startPos = getRandomPosition(config.width, config.height);
                     
-                    // Configure sounds
-                    dealSound.setRate(1.0);
-                    revealSound.setRate(1.0);
-                    
-                    const cards = [
-                        {% for card in cards %}
-                        {
-                            name: '{{ card.name }}',
-                            isReversed: {{ card.is_reversed|lower }}
-                        },
-                        {% endfor %}
-                    ];
+                    // Create card back first
+                    const card = this.add.image(startPos.x, startPos.y, 'card_back');
+                    card.setDisplaySize(cardWidth, cardHeight);
+                    card.setAngle(pos.angle);
+                    card.setAlpha(0);
 
-                    const scale = 1.0;
-                    const cardWidth = 100 * scale;
-                    const cardHeight = 160 * scale;
-                    const spacing = 15 * scale;
-                    const centerX = (config.width / 2) - cardWidth;
-                    const centerY = config.height / 2;
+                    card.frontImage = cardData.name;
+                    card.isReversed = cardData.isReversed;
+                    placedCards[cardIndex] = card;
 
-                    // Celtic Cross positions
-                    const positions = [
-                        { x: centerX, y: centerY, title: "The Present", angle: 0 },
-                        { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
-                        { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
-                        { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
-                        { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
-                        { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
-                        { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
-                        { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
-                        { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
-                        { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
-                    ];
-
-                    // Place cards with animation
-                    let placedCards = [];
-                    
-                    // Create placement order array
-                    const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
-                    
-                    cardOrder.forEach((cardIndex, index) => {
-                        const pos = positions[cardIndex];
-                        const cardData = cards[cardIndex];
-                        const startPos = getRandomPosition(config.width, config.height);
-                        
-                        // Create card back first
-                        const card = this.add.image(startPos.x, startPos.y, 'card_back');
-                        card.setDisplaySize(cardWidth, cardHeight);
-                        card.setAngle(pos.angle);
-                        card.setAlpha(0);
-
-                        card.frontImage = cardData.name;
-                        card.isReversed = cardData.isReversed;
-                        placedCards[cardIndex] = card;
-
-                        this.time.delayedCall(index * 500, () => {
-                            dealSound.play();
-                            card.setAlpha(1);
-                            this.tweens.add({
-                                targets: card,
-                                x: pos.x,
-                                y: pos.y,
-                                ease: 'Power2',
-                                duration: 500,
-                                onComplete: () => {
-                                    if (index === cards.length - 1) {
-                                        this.time.delayedCall(1000, () => {
-                                            cardOrder.forEach((revealIndex, i) => {
-                                                this.time.delayedCall(i * 500, () => {
-                                                    const placedCard = placedCards[revealIndex];
-                                                    revealSound.play();
-                                                    this.tweens.add({
-                                                        targets: placedCard,
-                                                        scaleX: 0,
-                                                        duration: 250,
-                                                        ease: 'Linear',
-                                                        onComplete: () => {
-                                                            placedCard.setTexture(placedCard.frontImage);
-                                                            placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                            if (placedCard.isReversed) {
-                                                                placedCard.setAngle(placedCard.angle + 180);
-                                                            }
-                                                            this.tweens.add({
-                                                                targets: placedCard,
-                                                                scaleX: 1,
-                                                                duration: 250,
-                                                                ease: 'Linear',
-                                                                onComplete: () => {
-                                                                    placedCard.setInteractive();
-                                                                    placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                                    
-                                                                    placedCard.on('pointerover', function() {
-                                                                        this.setTint(0xdddddd);
-                                                                        const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
-                                                                            fontSize: '14px',
-                                                                            fill: '#fff',
-                                                                            backgroundColor: '#000'
-                                                                        });
-                                                                        text.setOrigin(0.5);
-                                                                        this.positionText = text;
-                                                                    });
-                                                                    
-                                                                    placedCard.on('pointerout', function() {
-                                                                        this.clearTint();
-                                                                        if (this.positionText) {
-                                                                            this.positionText.destroy();
-                                                                        }
-                                                                    });
-
-                                                                    if (revealIndex === cardOrder[cardOrder.length - 1]) {
-                                                                        this.time.delayedCall(500, () => {
-                                                                            buttonBackground.setVisible(true);
-                                                                            interpretButton.setVisible(true);
-                                                                        });
-                                                                    }
-                                                                }
-                                                            });
+                    this.time.delayedCall(index * 500, () => {
+                        dealSound.play();
+                        card.setAlpha(1);
+                        this.tweens.add({
+                            targets: card,
+                            x: pos.x,
+                            y: pos.y,
+                            ease: 'Power2',
+                            duration: 500,
+                            onComplete: () => {
+                                if (index === cards.length - 1) {
+                                    this.time.delayedCall(1000, () => {
+                                        cardOrder.forEach((revealIndex, i) => {
+                                            this.time.delayedCall(i * 500, () => {
+                                                const placedCard = placedCards[revealIndex];
+                                                revealSound.play();
+                                                this.tweens.add({
+                                                    targets: placedCard,
+                                                    scaleX: 0,
+                                                    duration: 250,
+                                                    ease: 'Linear',
+                                                    onComplete: () => {
+                                                        placedCard.setTexture(placedCard.frontImage);
+                                                        placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                        if (placedCard.isReversed) {
+                                                            placedCard.setAngle(placedCard.angle + 180);
                                                         }
-                                                    });
+                                                        this.tweens.add({
+                                                            targets: placedCard,
+                                                            scaleX: 1,
+                                                            duration: 250,
+                                                            ease: 'Linear',
+                                                            onComplete: () => {
+                                                                placedCard.setInteractive();
+                                                                placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                                
+                                                                placedCard.on('pointerover', function() {
+                                                                    this.setTint(0xdddddd);
+                                                                    const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                        fontSize: '14px',
+                                                                        fill: '#fff',
+                                                                        backgroundColor: '#000'
+                                                                    });
+                                                                    text.setOrigin(0.5);
+                                                                    this.positionText = text;
+                                                                });
+                                                                
+                                                                placedCard.on('pointerout', function() {
+                                                                    this.clearTint();
+                                                                    if (this.positionText) {
+                                                                        this.positionText.destroy();
+                                                                    }
+                                                                });
+
+                                                                if (revealIndex === cardOrder[cardOrder.length - 1]) {
+                                                                    this.time.delayedCall(500, () => {
+                                                                        buttonBackground.setVisible(true);
+                                                                        interpretButton.setVisible(true);
+                                                                    });
+                                                                }
+                                                            }
+                                                        });
+                                                    }
                                                 });
                                             });
                                         });
-                                    }
+                                    });
                                 }
-                            });
+                            }
                         });
                     });
                 });
