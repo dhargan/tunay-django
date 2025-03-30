@@ -199,98 +199,153 @@
 
             // Add semi-transparent overlay
             const overlay = this.add.graphics();
-            overlay.fillStyle(0x000000, 0.7);
+            overlay.fillStyle(0x000000, 0.6);
             overlay.fillRect(0, 0, config.width, config.height);
 
-            // Add title text
-            const titleText = this.add.text(config.width/2, 150, 'Enter your question for the Tarot', {
+            // Upper container for title and disclaimer
+            const upperContainer = this.add.container(config.width/2, 120);
+
+            // Add decorative line
+            const line = this.add.graphics();
+            line.lineStyle(2, 0xffd700, 0.8);
+            line.beginPath();
+            line.moveTo(-150, 60);
+            line.lineTo(150, 60);
+            line.strokePath();
+            upperContainer.add(line);
+
+            // Title text
+            const titleText = this.add.text(0, 0, 'Ask the Cards', {
                 fontFamily: 'W95FA',
-                fontSize: '28px',
+                fontSize: '36px',
                 color: '#ffd700',
                 align: 'center'
-            });
+            })
+            .setShadow(0, 2, '#000000', 10, true, true);
             titleText.setOrigin(0.5);
+            upperContainer.add(titleText);
 
-            // Add disclaimer
-            const disclaimer = this.add.text(config.width/2, 200, 'Frame your question thoughtfully.\nBe specific but avoid yes/no questions.\nFocus on guidance and insight.', {
+            // Subtitle
+            const subtitle = this.add.text(0, 80, 'What guidance do you seek?', {
+                fontFamily: 'W95FA',
+                fontSize: '24px',
+                color: '#ffffff',
+                align: 'center'
+            })
+            .setShadow(0, 2, '#000000', 5, true, true);
+            subtitle.setOrigin(0.5);
+            upperContainer.add(subtitle);
+
+            // Disclaimer
+            const disclaimer = this.add.text(0, 130, 'Frame your question thoughtfully.\nBe specific but avoid yes/no questions.\nFocus on guidance and insight.', {
                 fontFamily: 'W95FA',
                 fontSize: '16px',
-                color: '#ffffff',
+                color: '#d3d3d3',
                 align: 'center',
                 lineSpacing: 10
             });
             disclaimer.setOrigin(0.5);
+            upperContainer.add(disclaimer);
 
-            // Create text input
+            // Lower container - moved higher up for mobile
+            const lowerContainer = this.add.container(config.width/2, config.height - 250);
+
+            // Text input with responsive width and positioning
             const textInput = document.createElement('textarea');
             textInput.maxLength = 200;
-            textInput.style = 'width: 400px; height: 100px; padding: 10px; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffd700; border-radius: 8px; font-family: W95FA; font-size: 16px;';
+            const inputWidth = Math.min(300, window.innerWidth * 0.85);
+            const inputHeight = Math.min(120, window.innerHeight * 0.15);
+            textInput.style = `
+                width: ${inputWidth}px; 
+                height: ${inputHeight}px; 
+                padding: 15px; 
+                background: rgba(0,0,0,0.7); 
+                color: white; 
+                border: 2px solid #ffd700; 
+                border-radius: 12px; 
+                font-family: W95FA; 
+                font-size: 16px;
+                resize: none;
+                outline: none;
+                transition: all 0.3s ease;
+                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                margin-bottom: 20px;
+            `;
             textInput.placeholder = 'Type your question here...';
 
-            const inputElement = this.add.dom(config.width/2, 350, textInput);
-            
-            // Character counter
-            const charCounter = this.add.text(config.width/2 + 150, 400, '0/200', {
-                    fontFamily: 'W95FA',
+            // Adjust container position based on screen size
+            const updatePositions = () => {
+                const isMobile = window.innerWidth < 768;
+                lowerContainer.setPosition(
+                    config.width/2,
+                    isMobile ? config.height - 300 : config.height - 250
+                );
+            };
+
+            // Initial position update
+            updatePositions();
+
+            // Add resize listener
+            window.addEventListener('resize', updatePositions);
+
+            const inputElement = this.add.dom(0, 0, textInput);
+            lowerContainer.add(inputElement);
+
+            // Character counter - adjusted position
+            const charCounter = this.add.text(inputWidth/2 - 30, inputHeight/2 + 30, '0/200', {
+                fontFamily: 'W95FA',
                 fontSize: '14px',
-                color: '#ffffff'
+                color: '#a0a0a0'
             });
+            charCounter.setOrigin(1, 0.5);
+            lowerContainer.add(charCounter);
 
             textInput.addEventListener('input', () => {
                 charCounter.setText(`${textInput.value.length}/200`);
+                // Change color based on length
+                if (textInput.value.length > 150) {
+                    charCounter.setColor('#ffa500');
+                } else {
+                    charCounter.setColor('#a0a0a0');
+                }
             });
 
-            // Create consult button
-            const consultButtonWidth = 200;
-            const consultButtonHeight = 50;
-            const consultButtonX = config.width/2 - consultButtonWidth/2;
-            const consultButtonY = 450;
-
-            const consultButtonBackground = this.add.graphics();
-            consultButtonBackground.fillStyle(0x000000, 0.6);
-            consultButtonBackground.lineStyle(2, 0xffd700, 1);
-            consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-            consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-
-            const consultButton = this.add.text(config.width/2, consultButtonY + consultButtonHeight/2, 'Consult the Tarot', {
+            // Consult button - adjusted position
+            const consultButton = this.add.text(0, inputHeight + 60, 'Consult the Cards', {
                 fontFamily: 'W95FA',
                 fontSize: '24px',
                 color: '#ffd700',
-                padding: { x: 20, y: 10 }
+                padding: { x: 20, y: 12 }
             });
-            consultButton.setOrigin(0.5, 0.5);
+            consultButton.setOrigin(0.5);
             consultButton.setInteractive({ useHandCursor: true });
 
-            // Add hover effects for consult button
-            consultButton.on('pointerover', function() {
-                consultButtonBackground.clear();
-                consultButtonBackground.fillStyle(0x000000, 0.8);
-                consultButtonBackground.lineStyle(2, 0xfff700, 1);
-                consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                this.setColor('#fff700');
-            });
+            // Button background - adjusted position
+            const buttonBg = this.add.graphics();
+            const buttonWidth = Math.min(220, inputWidth * 0.8);
+            const buttonHeight = 50;
+            const drawButtonBackground = (color, alpha) => {
+                buttonBg.clear();
+                buttonBg.fillStyle(0x000000, 0.6);
+                buttonBg.lineStyle(2, color, alpha);
+                buttonBg.fillRoundedRect(-buttonWidth/2, inputHeight + 40, buttonWidth, buttonHeight, 12);
+                buttonBg.strokeRoundedRect(-buttonWidth/2, inputHeight + 40, buttonWidth, buttonHeight, 12);
+            };
+            
+            drawButtonBackground(0xffd700, 1);
+            lowerContainer.add(buttonBg);
+            lowerContainer.add(consultButton);
 
-            consultButton.on('pointerout', function() {
-                consultButtonBackground.clear();
-                consultButtonBackground.fillStyle(0x000000, 0.6);
-                consultButtonBackground.lineStyle(2, 0xffd700, 1);
-                consultButtonBackground.fillRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                consultButtonBackground.strokeRoundedRect(consultButtonX, consultButtonY, consultButtonWidth, consultButtonHeight, 8);
-                this.setColor('#ffd700');
-            });
-
-            // Store question and start reading when consult button is clicked
+            // Error message - adjusted position
             consultButton.on('pointerdown', () => {
                 const tarotQuestion = textInput.value.trim();
                 if (!tarotQuestion) {
-                    // Show error if question is empty
-                    const errorText = this.add.text(config.width/2, 520, 'Please enter your question first', {
+                    const errorText = this.add.text(0, inputHeight + 110, 'Please enter your question first', {
                         fontFamily: 'W95FA',
                         fontSize: '16px',
-                        color: '#ff0000'
-                    });
-                    errorText.setOrigin(0.5);
+                        color: '#ff6b6b'
+                    }).setOrigin(0.5);
+                    lowerContainer.add(errorText);
                     this.time.delayedCall(2000, () => errorText.destroy());
                     return;
                 }
@@ -300,12 +355,9 @@
 
                 // Clean up question screen
                 questionBackground.destroy();
-                titleText.destroy();
-                disclaimer.destroy();
-                inputElement.destroy();
-                charCounter.destroy();
-                consultButton.destroy();
-                consultButtonBackground.destroy();
+                overlay.destroy();
+                upperContainer.destroy();
+                lowerContainer.destroy();
 
                 // Add game background and continue with card dealing
                 const background = this.add.image(config.width/2, config.height/2, 'background');
