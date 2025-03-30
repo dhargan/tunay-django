@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="{% static 'pixel-tarot/css/style.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script>
-        // Oyun konfigürasyonu
+        // Game configuration
         const config = {
             type: Phaser.AUTO,
             width: 600,
@@ -49,11 +49,11 @@
             }
         };
 
-        // Oyun başlatma
+        // Start game
         let gameInstance = null;
         window.onload = () => gameInstance = new Phaser.Game(config);
 
-        // Responsive ayarları
+        // Responsive settings
         function getGameDimensions() {
             const width = 600;
             const height = 800;
@@ -80,30 +80,30 @@
         window.addEventListener('load', updateGameSize);
         window.addEventListener('resize', updateGameSize);
 
-        // Asset yükleme
+        // Load assets
         function preload() {
-            // Arkaplan ve UI
+            // Background and UI
             this.load.image('background', '{% static "pixel-tarot/assets/background.png" %}');
             this.load.image('refresh', '{% static "pixel-tarot/assets/refresh.png" %}');
             this.load.image('mainmenu', '{% static "pixel-tarot/assets/mainmenu.png" %}');
             
-            // Kartlar
+            // Cards
             this.load.image('card_back', '{% static "pixel-tarot/assets/tarot__back.png" %}');
             {% for card in cards %}
             this.load.image('{{ card.name }}', '{% static card.front_image_url %}');
             {% endfor %}
             
-            // Sesler
+            // Sounds
             this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
             this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
         }
 
-        // Kart pozisyonları ve oyun mantığı
+        // Card positions and game logic
         function create() {
             createStartScreen.call(this);
         }
 
-        // Ana menü ekranı
+        // Main menu screen
         function createStartScreen() {
             const startBackground = this.add.image(config.width/2, config.height/2, 'mainmenu')
                 .setDisplaySize(config.width, config.height);
@@ -114,7 +114,7 @@
             });
         }
 
-        // Başlat butonu
+        // Start button
         function createStartButton(onClick) {
             const buttonConfig = {
                 width: 160,
@@ -139,7 +139,7 @@
             .setShadow(2, 2, 'rgba(0,0,0,0.8)', 2)
             .setInteractive({ useHandCursor: true });
 
-            // Hover efektleri
+            // Hover effects
             button.on('pointerover', () => {
                 background.clear()
                     .fillStyle(0x000000, 0.8)
