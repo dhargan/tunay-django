@@ -272,10 +272,11 @@
                 margin-bottom: 20px;
             `;
             textInput.placeholder = 'Type your question here...';
+            const isMobile = window.innerWidth < 768;
 
             // Adjust container position based on screen size
             const updatePositions = () => {
-                const isMobile = window.innerWidth < 768;
+                
                 lowerContainer.setPosition(
                     config.width/2,
                     isMobile ? config.height - 300 : config.height - 250
@@ -291,8 +292,11 @@
             const inputElement = this.add.dom(0, 0, textInput);
             lowerContainer.add(inputElement);
 
+            let charCounterX = isMobile ? inputWidth/2 + 50 : inputWidth/2;
+            let charCounterY = isMobile ? inputHeight/2 + 100 : inputHeight/2 - 50;
+
             // Character counter - adjusted position
-            const charCounter = this.add.text(inputWidth/2 - 30, inputHeight/2 + 30, '0/200', {
+            const charCounter = this.add.text(charCounterX, charCounterY, '0/200', {
                 fontFamily: 'W95FA',
                 fontSize: '14px',
                 color: '#a0a0a0'
