@@ -98,16 +98,46 @@
             this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
             this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
             this.load.audio('bgMusic', "{% static 'pixel-tarot/assets/sounds/pixeltarot.mp3' %}");
+            this.load.image('soundOn', "{% static 'pixel-tarot/assets/sound-on.png' %}");
+            this.load.image('soundOff', "{% static 'pixel-tarot/assets/sound-off.png' %}");
         }
 
-        // Card positions and game logic
+        let globalMusic;
+
+        function initializeMusic(scene) {
+            if (!globalMusic) {
+                globalMusic = scene.sound.add('bgMusic', {
+                    loop: true,
+                    volume: 0.5
+                });
+                globalMusic.play();
+            }
+            return globalMusic;
+        }
+
+        function createMuteButton(scene) {
+            const muteButton = scene.add.image(40, 40, globalMusic.mute ? 'soundOff' : 'soundOn')
+                .setInteractive()
+                .setScale(2)
+                .setDepth(1000);
+
+            muteButton.on('pointerdown', () => {
+                if (globalMusic.mute) {
+                    globalMusic.setMute(false);
+                    muteButton.setTexture('soundOn');
+                } else {
+                    globalMusic.setMute(true);
+                    muteButton.setTexture('soundOff');
+                }
+            });
+            return muteButton;
+        }
+
+        // Ana scene'de müziği başlat
         function create() {
             createStartScreen.call(this);
-            const music = this.sound.add('bgMusic', {
-                loop: true,
-                volume: 0.5
-            });
-            music.play();
+            globalMusic = initializeMusic(this);
+            createMuteButton(this);
         }
 
         // Main menu screen
@@ -547,6 +577,8 @@
                     });
                 });
             });
+
+            createMuteButton(this);
         }
     </script>
 </head>
