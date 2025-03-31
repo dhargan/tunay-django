@@ -404,18 +404,22 @@
                 background.setDisplaySize(config.width, config.height);
 
                 // Add refresh button
-                const refreshButton = this.add.image(config.width - 35, 35, 'refresh');
-                refreshButton.setDisplaySize(55, 55);
+                const isMobile = window.innerWidth < 768;
+                const refreshX = isMobile ? config.width - 70 : config.width - 40;
+                const refreshButton = this.add.image(refreshX, 40, 'refresh');
+                refreshButton.setDisplaySize(40, 40);
                 refreshButton.setInteractive({ 
                     hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
                     hitAreaCallback: Phaser.Geom.Circle.Contains,
                     useHandCursor: true 
                 });
+                const refreshButtonScale = refreshButton.scale;
+
                 refreshButton.on('pointerover', function() {
-                    this.setScale(1.1);
+                    this.setScale(refreshButtonScale * 1.1);
                 });
                 refreshButton.on('pointerout', function() {
-                    this.setScale(1);
+                    this.setScale(refreshButtonScale);
                 });
                 refreshButton.on('pointerdown', function() {
                     location.reload();
