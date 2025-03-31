@@ -97,11 +97,17 @@
             // Sounds
             this.load.audio('dealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_3.wav" %}');
             this.load.audio('revealSound', '{% static "pixel-tarot/assets/sounds/GP_Draw_2.wav" %}');
+            this.load.audio('bgMusic', "{% static 'pixel-tarot/assets/sounds/pixeltarot.mp3' %}");
         }
 
         // Card positions and game logic
         function create() {
             createStartScreen.call(this);
+            const music = this.sound.add('bgMusic', {
+                loop: true,
+                volume: 0.5
+            });
+            music.play();
         }
 
         // Main menu screen
