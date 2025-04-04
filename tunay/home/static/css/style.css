@@ -114,7 +114,14 @@ body {
 
 .section-title {
     font-size: 2.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 0.3rem;
+}
+
+.section-subtitle {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+    font-style: italic;
 }
 
 .project-card {
@@ -223,5 +230,10 @@ body {
     
     .projects-section .card-text {
         font-size: 0.9rem;
+    }
+
+    .section-subtitle {
+        font-size: 1rem;
+        padding: 0 1rem;
     }
 }
