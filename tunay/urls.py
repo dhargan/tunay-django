@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from tunay.home import views as home_views
 from tunay.pixel_tarot import views as pixel_views
 
@@ -23,4 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_views.index),  # Ana sayfa için home app'i
     path('pixel-tarot/', pixel_views.index),  # pixel-tarot app'i için view
+    path('api/pixel-tarot/', include('tunay.pixel_tarot.api.urls')),  # Pixel Tarot API
 ]

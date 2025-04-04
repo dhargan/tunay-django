@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tunay.home',
     'tunay.pixel_tarot',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
