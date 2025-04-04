@@ -178,3 +178,50 @@ body {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* Professional Projects Styles */
+.projects-section .card {
+    height: 100%;
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.projects-section .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.projects-section .card-title {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.projects-section .card-subtitle {
+    color: #8b6b8f;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.projects-section .card-text {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.projects-section .card-text small {
+    color: #8b6b8f;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .projects-section .card-title {
+        font-size: 1.2rem;
+    }
+    
+    .projects-section .card-text {
+        font-size: 0.9rem;
+    }
+}
