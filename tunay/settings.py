@@ -11,23 +11,24 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
-
-from tunay import home
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env_path = os.path.join(Path(__file__).resolve().parent, '.env')
+load_dotenv(dotenv_path=env_path)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+OPENAI_SECRET_KEY = os.getenv('OPENAI_SECRET_KEY')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$03oipju(awbd6@2nn!&^eaqv83chh8eii%g!gckil^e-gbhn*'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-defaultkey-fordev-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['tunay-7b89aa52bacc.herokuapp.com', 'www.tunay.dev', '127.0.0.1', 'localhost']
+# Parse allowed hosts from environment
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # Application definition
