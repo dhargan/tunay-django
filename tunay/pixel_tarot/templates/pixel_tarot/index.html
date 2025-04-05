@@ -450,13 +450,182 @@
                 const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
                     fontFamily: 'W95FA',
                     fontSize: '20px',
-                    color: '#d3d3d3',
+                    color: '#ffd700',
                     padding: { x: 20, y: 10 }
                 });
                 interpretButton.setOrigin(0.5, 0.5);
                 interpretButton.setVisible(false);
                 interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
                 interpretButton.setInteractive({ useHandCursor: true });
+
+                // Create loading indicator (initially hidden)
+                const loadingContainer = this.add.container(config.width/2, config.height/2);
+                loadingContainer.setVisible(false);
+                loadingContainer.setDepth(1000);
+                
+                // Add semi-transparent background
+                const loadingBg = this.add.graphics();
+                loadingBg.fillStyle(0x000000, 0.7);
+                loadingBg.fillRect(-200, -100, 400, 200);
+                loadingContainer.add(loadingBg);
+                
+                // Loading text
+                const loadingText = this.add.text(0, -20, 'Consulting the spirits...', {
+                    fontFamily: 'W95FA',
+                    fontSize: '24px',
+                    color: '#ffd700',
+                    align: 'center'
+                });
+                loadingText.setOrigin(0.5);
+                loadingContainer.add(loadingText);
+                
+                // Loading animation dots
+                const loadingDots = this.add.text(0, 20, '...', {
+                    fontFamily: 'W95FA',
+                    fontSize: '32px',
+                    color: '#ffd700'
+                });
+                loadingDots.setOrigin(0.5);
+                loadingContainer.add(loadingDots);
+                
+                // Create reading result container (initially hidden)
+                const readingContainer = this.add.container(config.width/2, config.height/2);
+                readingContainer.setVisible(false);
+                readingContainer.setDepth(1000);
+                
+                // Add semi-transparent background for reading
+                const readingBg = this.add.graphics();
+                readingBg.fillStyle(0x000000, 0.85);
+                readingBg.fillRoundedRect(-250, -300, 500, 600, 16);
+                readingBg.lineStyle(2, 0xffd700, 1);
+                readingBg.strokeRoundedRect(-250, -300, 500, 600, 16);
+                readingContainer.add(readingBg);
+                
+                // Close button for reading
+                const closeButton = this.add.text(230, -280, 'X', {
+                    fontFamily: 'W95FA',
+                    fontSize: '20px',
+                    color: '#ffd700'
+                });
+                closeButton.setInteractive({ useHandCursor: true });
+                closeButton.on('pointerdown', () => {
+                    readingContainer.setVisible(false);
+                });
+                readingContainer.add(closeButton);
+                
+                // Reading title
+                const readingTitle = this.add.text(0, -270, 'Your Tarot Reading', {
+                    fontFamily: 'W95FA',
+                    fontSize: '28px',
+                    color: '#ffd700'
+                });
+                readingTitle.setOrigin(0.5);
+                readingContainer.add(readingTitle);
+                
+                // Create a scrollable text area using DOM
+                const scrollableTextDiv = document.createElement('div');
+                scrollableTextDiv.style = `
+                    width: 460px;
+                    height: 480px;
+                    padding: 20px;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: #ffd700 #333;
+                    font-family: W95FA;
+                    font-size: 18px;
+                    color: white;
+                    text-align: center;
+                    line-height: 1.6;
+                    background-color: transparent;
+                `;
+                
+                // Custom scrollbar for webkit browsers
+                scrollableTextDiv.innerHTML = `
+                    <style>
+                        ::-webkit-scrollbar {
+                            width: 8px;
+                        }
+                        ::-webkit-scrollbar-track {
+                            background: #333;
+                            border-radius: 4px;
+                        }
+                        ::-webkit-scrollbar-thumb {
+                            background: #ffd700;
+                            border-radius: 4px;
+                        }
+                        ::-webkit-scrollbar-thumb:hover {
+                            background: #ffea00;
+                        }
+                    </style>
+                    <div id="reading-content"></div>
+                `;
+                
+                // Position the scrollable container right below the title
+                // Center it horizontally, and place it vertically below the title with some margin
+                const scrollElement = this.add.dom(0, -90, scrollableTextDiv);
+                scrollElement.setOrigin(0.5, 0);  // Set origin to top-center so it starts from the exact position
+                readingContainer.add(scrollElement);
+                
+                // Animate loading dots
+                const animateLoadingDots = () => {
+                    let count = 0;
+                    return this.time.addEvent({
+                        delay: 500,
+                        callback: () => {
+                            count = (count + 1) % 4;
+                            let dots = '';
+                            for (let i = 0; i < count; i++) {
+                                dots += '.';
+                            }
+                            loadingDots.setText(dots);
+                        },
+                        loop: true
+                    });
+                };
+                
+                // Handle interpret button click
+                interpretButton.on('pointerdown', () => {
+                    // Show loading indicator
+                    loadingContainer.setVisible(true);
+                    
+                    // Start loading animation
+                    const loadingAnimation = animateLoadingDots();
+                    
+                    // Make API call to the interpret endpoint
+                    fetch('/api/pixel-tarot/interpret/')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Hide loading indicator
+                            loadingContainer.setVisible(false);
+                            loadingAnimation.remove();
+                            
+                            // Display the reading in scrollable div
+                            const readingContent = document.getElementById('reading-content');
+                            if (readingContent) {
+                                readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
+                            }
+                            readingContainer.setVisible(true);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching interpretation:', error);
+                            
+                            // Hide loading indicator
+                            loadingContainer.setVisible(false);
+                            loadingAnimation.remove();
+                            
+                            // Show error message
+                            const readingContent = document.getElementById('reading-content');
+                            if (readingContent) {
+                                readingContent.innerHTML = 'The spirits are silent today. Please try again later.';
+                            }
+                            readingContainer.setVisible(true);
+                        });
+                });
 
                 // Create sound objects
                 const dealSound = this.sound.add('dealSound', { volume: 0.5 });
