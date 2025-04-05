@@ -5,6 +5,6 @@ from rest_framework.response import Response
 @api_view(['GET'])
 def success_view(request):
     """
-    Basit bir başarı mesajı döndüren endpoint.
+    A simple endpoint that returns a success message.
     """
-    return Response({"status": "success", "message": "İşlem başarılı!"}) 
+    return Response({"status": "success", "message": "Operation successful!"}) 
