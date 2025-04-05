@@ -76,8 +76,7 @@ def interpret(request):
             "a Celtic Cross spread, provide a single concise interpretation as a "
             "coherent, mystical story.\n\n"
             "Begin warmly by explicitly referencing the client's question "
-            "(\"Ah yes, beloved seeker, you asked about...\"), making them feel "
-            "understood immediately.\n\n"
+            "making them feel understood immediately.\n\n"            
             "If the client's question isn't very suitable for tarot, kindly acknowledge "
             "this briefly (\"This question may not perfectly align with tarot wisdom, "
             "but let's see what guidance emerges...\").\n\n"
@@ -88,6 +87,7 @@ def interpret(request):
             "individually listing card positions.\n\n"
             "End with short, empowering guidance.\n\n"
             "Keep it short, sincere, clear, mystical, and optimized for minimal token usage."
+            "If you can detect the language of the client's question, respond in that language. \n\n"
         )
 
         # Make OpenAI API call
