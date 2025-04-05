@@ -13,3 +13,4 @@ staticfiles/
 # SQLite veritabanı
 *.sqlite3
 db.sqlite3
+tunay/.env
