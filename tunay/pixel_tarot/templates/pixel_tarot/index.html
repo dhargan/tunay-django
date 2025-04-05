@@ -562,7 +562,7 @@
                 
                 // Position the scrollable container right below the title
                 // Center it horizontally, and place it vertically below the title with some margin
-                const scrollElement = this.add.dom(0, -90, scrollableTextDiv);
+                const scrollElement = this.add.dom(0, -150, scrollableTextDiv);
                 scrollElement.setOrigin(0.5, 0);  // Set origin to top-center so it starts from the exact position
                 readingContainer.add(scrollElement);
                 
@@ -585,6 +585,11 @@
                 
                 // Handle interpret button click
                 interpretButton.on('pointerdown', () => {
+                    // Disable the button immediately
+                    interpretButton.disableInteractive();
+                    interpretButton.setAlpha(0.5);
+                    interpretButton.setColor('#888888');
+                    
                     // Show loading indicator
                     loadingContainer.setVisible(true);
                     
@@ -617,6 +622,11 @@
                             // Hide loading indicator
                             loadingContainer.setVisible(false);
                             loadingAnimation.remove();
+                            
+                            // Re-enable button in case of error so user can try again
+                            interpretButton.setInteractive({ useHandCursor: true });
+                            interpretButton.setAlpha(1);
+                            interpretButton.setColor('#ffd700');
                             
                             // Show error message
                             const readingContent = document.getElementById('reading-content');
