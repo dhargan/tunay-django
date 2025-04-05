@@ -501,18 +501,6 @@
                 readingBg.strokeRoundedRect(-250, -300, 500, 600, 16);
                 readingContainer.add(readingBg);
                 
-                // Close button for reading
-                const closeButton = this.add.text(230, -280, 'X', {
-                    fontFamily: 'W95FA',
-                    fontSize: '20px',
-                    color: '#ffd700'
-                });
-                closeButton.setInteractive({ useHandCursor: true });
-                closeButton.on('pointerdown', () => {
-                    readingContainer.setVisible(false);
-                });
-                readingContainer.add(closeButton);
-                
                 // Reading title
                 const readingTitle = this.add.text(0, -270, 'Your Tarot Reading', {
                     fontFamily: 'W95FA',
@@ -612,6 +600,63 @@
                         cards: cardData
                     };
                     
+                    // Function to wrap text at 50 characters max per line
+                    function wrapTextAt50Chars(text) {
+                        const maxLineLength = 50;
+                        // Split text into lines (by existing line breaks)
+                        const lines = text.split('\n');
+                        
+                        // Process each line
+                        const wrappedLines = lines.map(line => {
+                            // If line is already short enough, return it as is
+                            if (line.length <= maxLineLength) {
+                                return line;
+                            }
+                            
+                            const words = line.split(' ');
+                            let currentLine = '';
+                            const resultLines = [];
+                            
+                            // Process each word
+                            for (const word of words) {
+                                // If adding this word exceeds max length, start a new line
+                                if (currentLine.length + word.length + 1 > maxLineLength) {
+                                    if (currentLine) {
+                                        resultLines.push(currentLine);
+                                    }
+                                    
+                                    // If the word itself is longer than maxLineLength, split it
+                                    if (word.length > maxLineLength) {
+                                        let remainingWord = word;
+                                        while (remainingWord.length > maxLineLength) {
+                                            resultLines.push(remainingWord.substring(0, maxLineLength));
+                                            remainingWord = remainingWord.substring(maxLineLength);
+                                        }
+                                        currentLine = remainingWord;
+                                    } else {
+                                        currentLine = word;
+                                    }
+                                } else {
+                                    // Add word to current line
+                                    if (currentLine) {
+                                        currentLine += ' ' + word;
+                                    } else {
+                                        currentLine = word;
+                                    }
+                                }
+                            }
+                            
+                            // Add the last line if it has content
+                            if (currentLine) {
+                                resultLines.push(currentLine);
+                            }
+                            
+                            return resultLines.join('\n');
+                        });
+                        
+                        return wrappedLines.join('\n');
+                    }
+                    
                     // Make API call to the interpret endpoint
                     fetch('/api/pixel-tarot/interpret/', {
                         method: 'POST',
@@ -637,7 +682,42 @@
                         // Display the reading in scrollable div
                         const readingContent = document.getElementById('reading-content');
                         if (readingContent) {
-                            readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
+                            // Check if mobile device
+                            if (window.innerWidth < 768) {
+                                readingContent.style.fontSize = '12px';
+                                const mobileWidth = Math.max(window.innerWidth * 0.8, 280);
+                                scrollableTextDiv.style.width = mobileWidth + 'px';
+                                
+                                // Set panel height relative to screen size
+                                const panelHeight = Math.min(window.innerHeight * 0.7, 600);
+                                
+                                // Set content height relative to panel height (70% of panel)
+                                const contentHeight = panelHeight * 0.55;
+                                scrollableTextDiv.style.height = contentHeight + 'px';
+                                
+                                // Move content slightly to the right
+                                scrollableTextDiv.style.paddingLeft = '30px';
+                                scrollableTextDiv.style.paddingRight = '10px';
+                                scrollableTextDiv.style.boxSizing = 'border-box';
+                                
+                                // Adjust container for mobile
+                                readingBg.clear();
+                                readingBg.fillStyle(0x000000, 0.85);
+                                const bgWidth = mobileWidth + 40;
+                                readingBg.fillRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
+                                readingBg.lineStyle(2, 0xffd700, 1);
+                                readingBg.strokeRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
+                                
+                                // Reposition elements - no closeButton anymore
+                                readingTitle.setPosition(0, -panelHeight/2 + 30);
+                                scrollElement.setPosition(0, -panelHeight/2 + 150);
+                                
+                                // For mobile, wrap text at 50 chars max per line
+                                const wrappedText = wrapTextAt50Chars(data.ai_response);
+                                readingContent.innerHTML = wrappedText.replace(/\n/g, '<br>');
+                            } else {
+                                readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
+                            }
                         }
                         readingContainer.setVisible(true);
                     })
