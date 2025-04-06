@@ -35,6 +35,21 @@
         // Game configuration
         const config = {
             type: Phaser.AUTO,
+            scale: {
+                mode: Phaser.Scale.FIT,                
+                width: 600,   // <-- Size of the game
+                height: 800,  
+                
+                min: {
+                    width: 300,
+                    height: 400
+                }, 
+
+                max: {
+                    width: 600,
+                    height: 800
+                },                 
+            },            
             width: 600,
             height: 800,
             parent: 'game',
