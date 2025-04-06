@@ -66,9 +66,6 @@ def interpret(request):
         card_list_text = ", ".join(formatted_cards)
         user_query = f"{user_question} The cards drawn in a Celtic Cross spread are: {card_list_text}"
         
-        # Initialize OpenAI client
-        client = openai.OpenAI(api_key=settings.OPENAI_SECRET_KEY)
-        
         # System prompt for tarot reading
         system_prompt = (
             "You're a mystical, friendly gypsy tarot-reader AI who speaks briefly, "
@@ -90,26 +87,46 @@ def interpret(request):
             "If you can detect the language of the client's question, respond in that language. \n\n"
         )
 
-        # Make OpenAI API call
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.75,
-            top_p=1.0,
-            max_tokens=400,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_query}
-            ]
-        )
+        # Check if in debug mode
+        if settings.DEBUG:
+            # Return dummy text in debug mode
+            dummy_response = (
+                "Dear seeker, I feel your question deeply. The cards reveal a powerful energy surrounding you. "
+                "The challenges you've faced in the past have led you to this moment, but a new door is opening before you. "
+                "The difficulties you're experiencing now will soon pass. Do not lose faith in yourself. "
+                "The cards show that positive changes are coming your way. Follow your inner light and "
+                "remain open to the opportunities the universe presents. When you listen to your heart, you'll find the right path. "
+                "The sun always emerges from behind the clouds, just as your fortune will soon shine brightly."
+            )
+            
+            return Response({
+                "status": "success",
+                "message": "Debug mode - dummy response returned",
+                "ai_response": dummy_response
+            })
+        else:
+            # Make OpenAI API call in production mode
+            client = openai.OpenAI(api_key=settings.OPENAI_SECRET_KEY)
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                temperature=0.75,
+                top_p=1.0,
+                max_tokens=400,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_query}
+                ]
+            )
 
-        # Extract AI response
-        ai_message = response.choices[0].message.content
-        
-        return Response({
-            "status": "success",
-            "message": "Communication with OpenAI successful",
-            "ai_response": ai_message
-        })
+            # Extract AI response
+            ai_message = response.choices[0].message.content
+            
+            return Response({
+                "status": "success",
+                "message": "Communication with OpenAI successful",
+                "ai_response": ai_message
+            })
         
     except Exception as e:
         return Response(
