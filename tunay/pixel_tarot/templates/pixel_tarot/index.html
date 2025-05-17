@@ -96,6 +96,12 @@
         function createStartScreen() {
             const startBackground = this.add.image(config.width/2, config.height/2, 'mainmenu')
                 .setDisplaySize(config.width, config.height);
+                
+            // Expose createQuestionScreen to the global scope
+            this.createQuestionScreen = () => {
+                startBackground.destroy();
+                createQuestionScreen.call(this);
+            };
         }
 
         function getRandomPosition(width, height) {
@@ -790,10 +796,36 @@
             <h2 class="text-white quicksand-txt mb-1">Software Engineer</h2>
         </div>
     </div>
-    <div id="game-container">
-    <div id="game"></div>
+    <div class="game-area">
+        <div id="game-container">
+            <div id="game"></div>
+        </div>
+        <div class="game-info">
+            <h2>Pixel Tarot</h2>
+            <p>
+                Welcome to Pixel Tarot, a digital divination experience that blends classic tarot reading with retro pixel art aesthetics. 
+                This application allows you to consult the cards for guidance and insight into your questions.
+            </p>
+            <p>
+                The cards will be presented in a modified Celtic Cross spread, offering a comprehensive reading 
+                that explores various aspects of your inquiry.
+            </p>
+            <button id="startReadingBtn" class="btn btn-primary">Start Reading</button>
+        </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Connect the Start Reading button to the game
+        document.getElementById('startReadingBtn').addEventListener('click', function() {
+            if (gameInstance && gameInstance.scene.scenes[0]) {
+                const mainScene = gameInstance.scene.scenes[0];
+                // If the game is in start screen, move to question screen
+                if (mainScene.createQuestionScreen) {
+                    mainScene.createQuestionScreen();
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
