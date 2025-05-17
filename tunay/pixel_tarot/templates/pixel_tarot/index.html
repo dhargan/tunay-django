@@ -354,12 +354,15 @@
                 <h2 id="user-question"></h2>
                 <p id="instructions-text">The cards have been revealed. You may now interpret their meaning.</p>
                 <div id="interpretation-text" style="display: none;"></div>
-                <button id="interpretBtn" class="btn btn-primary">
-                    <span id="interpretBtnText">Interpret</span>
-                    <span id="loadingIndicator" style="display: none;">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                </button>
+                <div class="button-container">
+                    <button id="interpretBtn" class="btn btn-primary">
+                        <span id="interpretBtnText">Interpret</span>
+                        <span id="loadingIndicator" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                    <button id="restartBtn" style="display: none;" class="btn btn-primary">Restart</button>
+                </div>
             </div>
         </div>
     </div>
@@ -498,7 +501,10 @@
                 // Hide loading and show interpretation
                 btnText.style.display = 'inline-block';
                 loadingIndicator.style.display = 'none';
-                interpretBtn.disabled = false;
+                
+                // Hide interpret button and show restart button
+                interpretBtn.style.display = 'none';
+                document.getElementById('restartBtn').style.display = 'inline-block';
                 
                 // Hide instructions text
                 instructionsText.style.display = 'none';
@@ -516,6 +522,31 @@
                 // Show error message
                 alert('Error: ' + (error.message || 'Failed to get interpretation. Please try again.'));
             });
+        });
+
+        // Connect the Restart button
+        document.getElementById('restartBtn').addEventListener('click', function() {
+            // Hide interpretation panel and show intro content
+            document.getElementById('reading-panel').style.display = 'none';
+            document.getElementById('question-content').style.display = 'none';
+            document.getElementById('intro-content').style.display = 'block';
+            
+            // Reset the interpretation text and show the instructions again
+            document.getElementById('interpretation-text').style.display = 'none';
+            document.getElementById('instructions-text').style.display = 'block';
+            
+            // Reset the interpret button
+            document.getElementById('interpretBtn').style.display = 'inline-block';
+            this.style.display = 'none';
+            
+            // Re-enable form elements
+            document.getElementById('tarotQuestion').disabled = false;
+            document.getElementById('tarotQuestion').value = '';
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('consultBtn').disabled = false;
+            
+            // Reload page to restart the game
+            location.reload();
         });
     </script>
 </body>
