@@ -135,649 +135,486 @@
             const questionBackground = this.add.image(config.width/2, config.height/2, 'background-2')
                 .setDisplaySize(config.width, config.height);
 
-            // Add semi-transparent overlay
-            const overlay = this.add.graphics();
-            overlay.fillStyle(0x000000, 0.6);
-            overlay.fillRect(0, 0, config.width, config.height);
+            // Since we're getting the question from outside the game, 
+            // we'll skip showing the question form and go straight to dealing cards
+            questionBackground.destroy();
 
-            // Upper container for title and disclaimer
-            const upperContainer = this.add.container(config.width/2, 120);
+            // Add game background and continue with card dealing
+            const background = this.add.image(config.width/2, config.height/2, 'background');
+            background.setDisplaySize(config.width, config.height);
 
-            // Add decorative line
-            const line = this.add.graphics();
-            line.lineStyle(2, 0xffd700, 0.8);
-            line.beginPath();
-            line.moveTo(-150, 60);
-            line.lineTo(150, 60);
-            line.strokePath();
-            upperContainer.add(line);
-
-            // Title text
-            const titleText = this.add.text(0, 0, 'Ask the Cards', {
-                fontFamily: 'W95FA',
-                fontSize: '36px',
-                color: '#ffd700',
-                align: 'center'
-            })
-            .setShadow(0, 2, '#000000', 10, true, true);
-            titleText.setOrigin(0.5);
-            upperContainer.add(titleText);
-
-            // Subtitle
-            const subtitle = this.add.text(0, 80, 'What guidance do you seek?', {
-                fontFamily: 'W95FA',
-                fontSize: '24px',
-                color: '#ffffff',
-                align: 'center'
-            })
-            .setShadow(0, 2, '#000000', 5, true, true);
-            subtitle.setOrigin(0.5);
-            upperContainer.add(subtitle);
-
-            // Disclaimer
-            const disclaimer = this.add.text(0, 130, 'Frame your question thoughtfully.\nBe specific but avoid yes/no questions.\nFocus on guidance and insight.', {
-                fontFamily: 'W95FA',
-                fontSize: '16px',
-                color: '#d3d3d3',
-                align: 'center',
-                lineSpacing: 10
-            });
-            disclaimer.setOrigin(0.5);
-            upperContainer.add(disclaimer);
-
-            // Lower container - moved higher up for mobile
-            const lowerContainer = this.add.container(config.width/2, config.height - 250);
-
-            // Text input with responsive width and positioning
-            const textInput = document.createElement('textarea');
-            textInput.maxLength = 200;
-            const inputWidth = Math.min(300, window.innerWidth * 0.85);
-            const inputHeight = Math.min(120, window.innerHeight * 0.15);
-            textInput.style = `
-                width: ${inputWidth}px; 
-                height: ${inputHeight}px; 
-                padding: 15px; 
-                background: rgba(0,0,0,0.7); 
-                color: white; 
-                border: 2px solid #ffd700; 
-                border-radius: 12px; 
-                font-family: W95FA; 
-                font-size: 16px;
-                resize: none;
-                outline: none;
-                transition: all 0.3s ease;
-                box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                margin-bottom: 20px;
-            `;
-            textInput.placeholder = 'Type your question here...';
+            // Add refresh button
             const isMobile = window.innerWidth < 768;
+            const refreshX = isMobile ? config.width - 70 : config.width - 40;
+            const refreshButton = this.add.image(refreshX, 40, 'refresh');
+            refreshButton.setDisplaySize(40, 40);
+            refreshButton.setInteractive({ 
+                hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
+                hitAreaCallback: Phaser.Geom.Circle.Contains,
+                useHandCursor: true 
+            });
+            const refreshButtonScale = refreshButton.scale;
 
-            // Adjust container position based on screen size
-            const updatePositions = () => {
-                
-                lowerContainer.setPosition(
-                    config.width/2,
-                    isMobile ? config.height - 300 : config.height - 250
-                );
-            };
+            refreshButton.on('pointerover', function() {
+                this.setScale(refreshButtonScale * 1.1);
+            });
+            refreshButton.on('pointerout', function() {
+                this.setScale(refreshButtonScale);
+            });
+            refreshButton.on('pointerdown', function() {
+                location.reload();
+            });
 
-            // Initial position update
-            updatePositions();
+            // Create interpret button (initially hidden)
+            const buttonWidth = 120;
+            const buttonHeight = 40;
+            const buttonX = 50;
+            const buttonY = config.height - 50;
 
-            // Add resize listener
-            window.addEventListener('resize', updatePositions);
+            const buttonBackground = this.add.graphics();
+            buttonBackground.fillStyle(0x808080, 0.6);
+            buttonBackground.lineStyle(2, 0x808080, 1);
+            buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+            buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
+            buttonBackground.setVisible(false);
 
-            const inputElement = this.add.dom(0, 0, textInput);
-            lowerContainer.add(inputElement);
-
-            let charCounterX = isMobile ? inputWidth/2 + 50 : inputWidth/2;
-            let charCounterY = isMobile ? inputHeight/2 + 100 : inputHeight/2 - 50;
-
-            // Character counter - adjusted position
-            const charCounter = this.add.text(charCounterX, charCounterY, '0/200', {
+            const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
                 fontFamily: 'W95FA',
-                fontSize: '14px',
-                color: '#a0a0a0'
+                fontSize: '20px',
+                color: '#ffd700',
+                padding: { x: 20, y: 10 }
             });
-            charCounter.setOrigin(1, 0.5);
-            lowerContainer.add(charCounter);
+            interpretButton.setOrigin(0.5, 0.5);
+            interpretButton.setVisible(false);
+            interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
+            interpretButton.setInteractive({ useHandCursor: true });
 
-            textInput.addEventListener('input', () => {
-                charCounter.setText(`${textInput.value.length}/200`);
-                // Change color based on length
-                if (textInput.value.length > 150) {
-                    charCounter.setColor('#ffa500');
-                } else {
-                    charCounter.setColor('#a0a0a0');
-                }
-            });
-
-            // Consult button - adjusted position
-            const consultButton = this.add.text(0, inputHeight + 60, 'Consult the Cards', {
+            // Create loading indicator (initially hidden)
+            const loadingContainer = this.add.container(config.width/2, config.height/2);
+            loadingContainer.setVisible(false);
+            loadingContainer.setDepth(1000);
+            
+            // Add semi-transparent background
+            const loadingBg = this.add.graphics();
+            loadingBg.fillStyle(0x000000, 0.7);
+            loadingBg.fillRect(-200, -100, 400, 200);
+            loadingContainer.add(loadingBg);
+            
+            // Loading text
+            const loadingText = this.add.text(0, -20, 'Consulting the spirits...', {
                 fontFamily: 'W95FA',
                 fontSize: '24px',
                 color: '#ffd700',
-                padding: { x: 20, y: 12 }
+                align: 'center'
             });
-            consultButton.setOrigin(0.5);
-            consultButton.setInteractive({ useHandCursor: true });
-
-            // Button background - adjusted position
-            const buttonBg = this.add.graphics();
-            const buttonWidth = Math.min(220, inputWidth * 0.8);
-            const buttonHeight = 50;
-            const drawButtonBackground = (color, alpha) => {
-                buttonBg.clear();
-                buttonBg.fillStyle(0x000000, 0.6);
-                buttonBg.lineStyle(2, color, alpha);
-                buttonBg.fillRoundedRect(-buttonWidth/2, inputHeight + 40, buttonWidth, buttonHeight, 12);
-                buttonBg.strokeRoundedRect(-buttonWidth/2, inputHeight + 40, buttonWidth, buttonHeight, 12);
+            loadingText.setOrigin(0.5);
+            loadingContainer.add(loadingText);
+            
+            // Loading animation dots
+            const loadingDots = this.add.text(0, 20, '...', {
+                fontFamily: 'W95FA',
+                fontSize: '32px',
+                color: '#ffd700'
+            });
+            loadingDots.setOrigin(0.5);
+            loadingContainer.add(loadingDots);
+            
+            // Create reading result container (initially hidden)
+            const readingContainer = this.add.container(config.width/2, config.height/2);
+            readingContainer.setVisible(false);
+            readingContainer.setDepth(1000);
+            
+            // Add semi-transparent background for reading
+            const readingBg = this.add.graphics();
+            readingBg.fillStyle(0x000000, 0.85);
+            readingBg.fillRoundedRect(-250, -300, 500, 600, 16);
+            readingBg.lineStyle(2, 0xffd700, 1);
+            readingBg.strokeRoundedRect(-250, -300, 500, 600, 16);
+            readingContainer.add(readingBg);
+            
+            // Reading title
+            const readingTitle = this.add.text(0, -270, 'Your Tarot Reading', {
+                fontFamily: 'W95FA',
+                fontSize: '28px',
+                color: '#ffd700'
+            });
+            readingTitle.setOrigin(0.5);
+            readingContainer.add(readingTitle);
+            
+            // Create a scrollable text area using DOM
+            const scrollableTextDiv = document.createElement('div');
+            scrollableTextDiv.style = `
+                width: 460px;
+                height: 480px;
+                padding: 20px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: #ffd700 #333;
+                font-family: W95FA;
+                font-size: 18px;
+                color: white;
+                text-align: center;
+                line-height: 1.6;
+                background-color: transparent;
+            `;
+            
+            // Custom scrollbar for webkit browsers
+            scrollableTextDiv.innerHTML = `
+                <style>
+                    ::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    ::-webkit-scrollbar-track {
+                        background: #333;
+                        border-radius: 4px;
+                    }
+                    ::-webkit-scrollbar-thumb {
+                        background: #ffd700;
+                        border-radius: 4px;
+                    }
+                    ::-webkit-scrollbar-thumb:hover {
+                        background: #ffea00;
+                    }
+                </style>
+                <div id="reading-content"></div>
+            `;
+            
+            // Position the scrollable container right below the title
+            // Center it horizontally, and place it vertically below the title with some margin
+            const scrollElement = this.add.dom(0, -150, scrollableTextDiv);
+            scrollElement.setOrigin(0.5, 0);  // Set origin to top-center so it starts from the exact position
+            readingContainer.add(scrollElement);
+            
+            // Animate loading dots
+            const animateLoadingDots = () => {
+                let count = 0;
+                return this.time.addEvent({
+                    delay: 500,
+                    callback: () => {
+                        count = (count + 1) % 4;
+                        let dots = '';
+                        for (let i = 0; i < count; i++) {
+                            dots += '.';
+                        }
+                        loadingDots.setText(dots);
+                    },
+                    loop: true
+                });
             };
             
-            drawButtonBackground(0xffd700, 1);
-            lowerContainer.add(buttonBg);
-            lowerContainer.add(consultButton);
-
-            // Error message - adjusted position
-            consultButton.on('pointerdown', () => {
-                const tarotQuestion = textInput.value.trim();
-                if (!tarotQuestion) {
-                    const errorText = this.add.text(0, inputHeight + 110, 'Please enter your question first', {
-                        fontFamily: 'W95FA',
-                        fontSize: '16px',
-                        color: '#ff6b6b'
-                    }).setOrigin(0.5);
-                    lowerContainer.add(errorText);
-                    this.time.delayedCall(2000, () => errorText.destroy());
-                    return;
-                }
-
-                // Store question for later use
-                this.tarotQuestion = tarotQuestion;
-
-                // Clean up question screen
-                questionBackground.destroy();
-                overlay.destroy();
-                upperContainer.destroy();
-                lowerContainer.destroy();
-
-                // Add game background and continue with card dealing
-                const background = this.add.image(config.width/2, config.height/2, 'background');
-                background.setDisplaySize(config.width, config.height);
-
-                // Add refresh button
-                const isMobile = window.innerWidth < 768;
-                const refreshX = isMobile ? config.width - 70 : config.width - 40;
-                const refreshButton = this.add.image(refreshX, 40, 'refresh');
-                refreshButton.setDisplaySize(40, 40);
-                refreshButton.setInteractive({ 
-                    hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
-                    hitAreaCallback: Phaser.Geom.Circle.Contains,
-                    useHandCursor: true 
-                });
-                const refreshButtonScale = refreshButton.scale;
-
-                refreshButton.on('pointerover', function() {
-                    this.setScale(refreshButtonScale * 1.1);
-                });
-                refreshButton.on('pointerout', function() {
-                    this.setScale(refreshButtonScale);
-                });
-                refreshButton.on('pointerdown', function() {
-                    location.reload();
-                });
-
-                // Create interpret button (initially hidden)
-                const buttonWidth = 120;
-                const buttonHeight = 40;
-                const buttonX = 50;
-                const buttonY = config.height - 50;
-
-                const buttonBackground = this.add.graphics();
-                buttonBackground.fillStyle(0x808080, 0.6);
-                buttonBackground.lineStyle(2, 0x808080, 1);
-                buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-                buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-                buttonBackground.setVisible(false);
-
-                const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
-                    fontFamily: 'W95FA',
-                    fontSize: '20px',
-                    color: '#ffd700',
-                    padding: { x: 20, y: 10 }
-                });
-                interpretButton.setOrigin(0.5, 0.5);
-                interpretButton.setVisible(false);
-                interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
-                interpretButton.setInteractive({ useHandCursor: true });
-
-                // Create loading indicator (initially hidden)
-                const loadingContainer = this.add.container(config.width/2, config.height/2);
-                loadingContainer.setVisible(false);
-                loadingContainer.setDepth(1000);
+            // Handle interpret button click
+            interpretButton.on('pointerdown', () => {
+                // Disable the button immediately
+                interpretButton.disableInteractive();
+                interpretButton.setAlpha(0.5);
+                interpretButton.setColor('#888888');
                 
-                // Add semi-transparent background
-                const loadingBg = this.add.graphics();
-                loadingBg.fillStyle(0x000000, 0.7);
-                loadingBg.fillRect(-200, -100, 400, 200);
-                loadingContainer.add(loadingBg);
+                // Show loading indicator
+                loadingContainer.setVisible(true);
                 
-                // Loading text
-                const loadingText = this.add.text(0, -20, 'Consulting the spirits...', {
-                    fontFamily: 'W95FA',
-                    fontSize: '24px',
-                    color: '#ffd700',
-                    align: 'center'
-                });
-                loadingText.setOrigin(0.5);
-                loadingContainer.add(loadingText);
+                // Start loading animation
+                const loadingAnimation = animateLoadingDots();
                 
-                // Loading animation dots
-                const loadingDots = this.add.text(0, 20, '...', {
-                    fontFamily: 'W95FA',
-                    fontSize: '32px',
-                    color: '#ffd700'
-                });
-                loadingDots.setOrigin(0.5);
-                loadingContainer.add(loadingDots);
-                
-                // Create reading result container (initially hidden)
-                const readingContainer = this.add.container(config.width/2, config.height/2);
-                readingContainer.setVisible(false);
-                readingContainer.setDepth(1000);
-                
-                // Add semi-transparent background for reading
-                const readingBg = this.add.graphics();
-                readingBg.fillStyle(0x000000, 0.85);
-                readingBg.fillRoundedRect(-250, -300, 500, 600, 16);
-                readingBg.lineStyle(2, 0xffd700, 1);
-                readingBg.strokeRoundedRect(-250, -300, 500, 600, 16);
-                readingContainer.add(readingBg);
-                
-                // Reading title
-                const readingTitle = this.add.text(0, -270, 'Your Tarot Reading', {
-                    fontFamily: 'W95FA',
-                    fontSize: '28px',
-                    color: '#ffd700'
-                });
-                readingTitle.setOrigin(0.5);
-                readingContainer.add(readingTitle);
-                
-                // Create a scrollable text area using DOM
-                const scrollableTextDiv = document.createElement('div');
-                scrollableTextDiv.style = `
-                    width: 460px;
-                    height: 480px;
-                    padding: 20px;
-                    overflow-y: auto;
-                    scrollbar-width: thin;
-                    scrollbar-color: #ffd700 #333;
-                    font-family: W95FA;
-                    font-size: 18px;
-                    color: white;
-                    text-align: center;
-                    line-height: 1.6;
-                    background-color: transparent;
-                `;
-                
-                // Custom scrollbar for webkit browsers
-                scrollableTextDiv.innerHTML = `
-                    <style>
-                        ::-webkit-scrollbar {
-                            width: 8px;
-                        }
-                        ::-webkit-scrollbar-track {
-                            background: #333;
-                            border-radius: 4px;
-                        }
-                        ::-webkit-scrollbar-thumb {
-                            background: #ffd700;
-                            border-radius: 4px;
-                        }
-                        ::-webkit-scrollbar-thumb:hover {
-                            background: #ffea00;
-                        }
-                    </style>
-                    <div id="reading-content"></div>
-                `;
-                
-                // Position the scrollable container right below the title
-                // Center it horizontally, and place it vertically below the title with some margin
-                const scrollElement = this.add.dom(0, -150, scrollableTextDiv);
-                scrollElement.setOrigin(0.5, 0);  // Set origin to top-center so it starts from the exact position
-                readingContainer.add(scrollElement);
-                
-                // Animate loading dots
-                const animateLoadingDots = () => {
-                    let count = 0;
-                    return this.time.addEvent({
-                        delay: 500,
-                        callback: () => {
-                            count = (count + 1) % 4;
-                            let dots = '';
-                            for (let i = 0; i < count; i++) {
-                                dots += '.';
-                            }
-                            loadingDots.setText(dots);
-                        },
-                        loop: true
+                // Collect card data for the API request
+                const cardData = [];
+                cardOrder.forEach((cardIndex) => {
+                    const card = placedCards[cardIndex];
+                    cardData.push({
+                        name: card.frontImage,
+                        is_reversed: card.isReversed
                     });
+                });
+                
+                // Prepare the POST request
+                const requestData = {
+                    user_question: this.tarotQuestion || "What guidance do the cards offer me?",
+                    cards: cardData
                 };
                 
-                // Handle interpret button click
-                interpretButton.on('pointerdown', () => {
-                    // Disable the button immediately
-                    interpretButton.disableInteractive();
-                    interpretButton.setAlpha(0.5);
-                    interpretButton.setColor('#888888');
+                // Function to wrap text at 50 characters max per line
+                function wrapTextAt50Chars(text) {
+                    const maxLineLength = 50;
+                    // Split text into lines (by existing line breaks)
+                    const lines = text.split('\n');
                     
-                    // Show loading indicator
-                    loadingContainer.setVisible(true);
-                    
-                    // Start loading animation
-                    const loadingAnimation = animateLoadingDots();
-                    
-                    // Collect card data for the API request
-                    const cardData = [];
-                    cardOrder.forEach((cardIndex) => {
-                        const card = placedCards[cardIndex];
-                        cardData.push({
-                            name: card.frontImage,
-                            is_reversed: card.isReversed
-                        });
-                    });
-                    
-                    // Prepare the POST request
-                    const requestData = {
-                        user_question: this.tarotQuestion || "What guidance do the cards offer me?",
-                        cards: cardData
-                    };
-                    
-                    // Function to wrap text at 50 characters max per line
-                    function wrapTextAt50Chars(text) {
-                        const maxLineLength = 50;
-                        // Split text into lines (by existing line breaks)
-                        const lines = text.split('\n');
+                    // Process each line
+                    const wrappedLines = lines.map(line => {
+                        // If line is already short enough, return it as is
+                        if (line.length <= maxLineLength) {
+                            return line;
+                        }
                         
-                        // Process each line
-                        const wrappedLines = lines.map(line => {
-                            // If line is already short enough, return it as is
-                            if (line.length <= maxLineLength) {
-                                return line;
-                            }
-                            
-                            const words = line.split(' ');
-                            let currentLine = '';
-                            const resultLines = [];
-                            
-                            // Process each word
-                            for (const word of words) {
-                                // If adding this word exceeds max length, start a new line
-                                if (currentLine.length + word.length + 1 > maxLineLength) {
-                                    if (currentLine) {
-                                        resultLines.push(currentLine);
+                        const words = line.split(' ');
+                        let currentLine = '';
+                        const resultLines = [];
+                        
+                        // Process each word
+                        for (const word of words) {
+                            // If adding this word exceeds max length, start a new line
+                            if (currentLine.length + word.length + 1 > maxLineLength) {
+                                if (currentLine) {
+                                    resultLines.push(currentLine);
+                                }
+                                
+                                // If the word itself is longer than maxLineLength, split it
+                                if (word.length > maxLineLength) {
+                                    let remainingWord = word;
+                                    while (remainingWord.length > maxLineLength) {
+                                        resultLines.push(remainingWord.substring(0, maxLineLength));
+                                        remainingWord = remainingWord.substring(maxLineLength);
                                     }
-                                    
-                                    // If the word itself is longer than maxLineLength, split it
-                                    if (word.length > maxLineLength) {
-                                        let remainingWord = word;
-                                        while (remainingWord.length > maxLineLength) {
-                                            resultLines.push(remainingWord.substring(0, maxLineLength));
-                                            remainingWord = remainingWord.substring(maxLineLength);
-                                        }
-                                        currentLine = remainingWord;
-                                    } else {
-                                        currentLine = word;
-                                    }
+                                    currentLine = remainingWord;
                                 } else {
-                                    // Add word to current line
-                                    if (currentLine) {
-                                        currentLine += ' ' + word;
-                                    } else {
-                                        currentLine = word;
-                                    }
+                                    currentLine = word;
+                                }
+                            } else {
+                                // Add word to current line
+                                if (currentLine) {
+                                    currentLine += ' ' + word;
+                                } else {
+                                    currentLine = word;
                                 }
                             }
-                            
-                            // Add the last line if it has content
-                            if (currentLine) {
-                                resultLines.push(currentLine);
-                            }
-                            
-                            return resultLines.join('\n');
-                        });
-                        
-                        return wrappedLines.join('\n');
-                    }
-                    
-                    // Make API call to the interpret endpoint
-                    fetch('/api/pixel-tarot/interpret/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken') // Django CSRF token function
-                        },
-                        body: JSON.stringify(requestData)
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(data => {
-                                throw new Error(data.message || 'Network response was not ok');
-                            });
                         }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Hide loading indicator
-                        loadingContainer.setVisible(false);
-                        loadingAnimation.remove();
                         
-                        // Display the reading in scrollable div
-                        const readingContent = document.getElementById('reading-content');
-                        if (readingContent) {
-                            // Check if mobile device
-                            if (window.innerWidth < 768) {
-                                readingContent.style.fontSize = '12px';
-                                const mobileWidth = Math.max(window.innerWidth * 0.8, 280);
-                                scrollableTextDiv.style.width = mobileWidth + 'px';
-                                
-                                // Set panel height relative to screen size
-                                const panelHeight = Math.min(window.innerHeight * 0.7, 600);
-                                
-                                // Set content height relative to panel height (70% of panel)
-                                const contentHeight = panelHeight * 0.55;
-                                scrollableTextDiv.style.height = contentHeight + 'px';
-                                
-                                // Move content slightly to the right
-                                scrollableTextDiv.style.paddingLeft = '30px';
-                                scrollableTextDiv.style.paddingRight = '10px';
-                                scrollableTextDiv.style.boxSizing = 'border-box';
-                                
-                                // Adjust container for mobile
-                                readingBg.clear();
-                                readingBg.fillStyle(0x000000, 0.85);
-                                const bgWidth = mobileWidth + 40;
-                                readingBg.fillRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
-                                readingBg.lineStyle(2, 0xffd700, 1);
-                                readingBg.strokeRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
-                                
-                                // Reposition elements - no closeButton anymore
-                                readingTitle.setPosition(0, -panelHeight/2 + 30);
-                                scrollElement.setPosition(0, -panelHeight/2 + 150);
-                                
-                                // For mobile, wrap text at 50 chars max per line
-                                const wrappedText = wrapTextAt50Chars(data.ai_response);
-                                readingContent.innerHTML = wrappedText.replace(/\n/g, '<br>');
-                            } else {
-                                readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
-                            }
+                        // Add the last line if it has content
+                        if (currentLine) {
+                            resultLines.push(currentLine);
                         }
-                        readingContainer.setVisible(true);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching interpretation:', error);
                         
-                        // Hide loading indicator
-                        loadingContainer.setVisible(false);
-                        loadingAnimation.remove();
-                        
-                        // Re-enable button in case of error so user can try again
-                        interpretButton.setInteractive({ useHandCursor: true });
-                        interpretButton.setAlpha(1);
-                        interpretButton.setColor('#ffd700');
-                        
-                        // Show error message
-                        const readingContent = document.getElementById('reading-content');
-                        if (readingContent) {
-                            readingContent.innerHTML = `The spirits are troubled: ${error.message || 'Please try again later.'}`;
-                        }
-                        readingContainer.setVisible(true);
+                        return resultLines.join('\n');
                     });
-                });
-
-                // Function to get CSRF token from cookies for Django
-                function getCookie(name) {
-                    let cookieValue = null;
-                    if (document.cookie && document.cookie !== '') {
-                        const cookies = document.cookie.split(';');
-                        for (let i = 0; i < cookies.length; i++) {
-                            const cookie = cookies[i].trim();
-                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                                break;
-                            }
+                    
+                    return wrappedLines.join('\n');
+                }
+                
+                // Make API call to the interpret endpoint
+                fetch('/api/pixel-tarot/interpret/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // Django CSRF token function
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Network response was not ok');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading indicator
+                    loadingContainer.setVisible(false);
+                    loadingAnimation.remove();
+                    
+                    // Display the reading in scrollable div
+                    const readingContent = document.getElementById('reading-content');
+                    if (readingContent) {
+                        // Check if mobile device
+                        if (window.innerWidth < 768) {
+                            readingContent.style.fontSize = '12px';
+                            const mobileWidth = Math.max(window.innerWidth * 0.8, 280);
+                            scrollableTextDiv.style.width = mobileWidth + 'px';
+                            
+                            // Set panel height relative to screen size
+                            const panelHeight = Math.min(window.innerHeight * 0.7, 600);
+                            
+                            // Set content height relative to panel height (70% of panel)
+                            const contentHeight = panelHeight * 0.55;
+                            scrollableTextDiv.style.height = contentHeight + 'px';
+                            
+                            // Move content slightly to the right
+                            scrollableTextDiv.style.paddingLeft = '30px';
+                            scrollableTextDiv.style.paddingRight = '10px';
+                            scrollableTextDiv.style.boxSizing = 'border-box';
+                            
+                            // Adjust container for mobile
+                            readingBg.clear();
+                            readingBg.fillStyle(0x000000, 0.85);
+                            const bgWidth = mobileWidth + 40;
+                            readingBg.fillRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
+                            readingBg.lineStyle(2, 0xffd700, 1);
+                            readingBg.strokeRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
+                            
+                            // Reposition elements - no closeButton anymore
+                            readingTitle.setPosition(0, -panelHeight/2 + 30);
+                            scrollElement.setPosition(0, -panelHeight/2 + 150);
+                            
+                            // For mobile, wrap text at 50 chars max per line
+                            const wrappedText = wrapTextAt50Chars(data.ai_response);
+                            readingContent.innerHTML = wrappedText.replace(/\n/g, '<br>');
+                        } else {
+                            readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
                         }
                     }
-                    return cookieValue;
-                }
-
-                // Create sound objects
-                const dealSound = this.sound.add('dealSound', { volume: 0.5 });
-                const revealSound = this.sound.add('revealSound', { volume: 0.5 });
-                
-                // Configure sounds
-                dealSound.setRate(1.0);
-                revealSound.setRate(1.0);
-                
-                const cards = [
-                    {% for card in cards %}
-                    {
-                        name: '{{ card.name }}',
-                        isReversed: {{ card.is_reversed|lower }}
-                    },
-                    {% endfor %}
-                ];
-
-                const scale = 1.0;
-                const cardWidth = 100 * scale;
-                const cardHeight = 160 * scale;
-                const spacing = 15 * scale;
-                const centerX = (config.width / 2) - cardWidth;
-                const centerY = config.height / 2;
-
-                // Celtic Cross positions
-                const positions = [
-                    { x: centerX, y: centerY, title: "The Present", angle: 0 },
-                    { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
-                    { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
-                    { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
-                    { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
-                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
-                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
-                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
-                    { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
-                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
-                ];
-
-                // Place cards with animation
-                let placedCards = [];
-                
-                // Create placement order array
-                const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
-                
-                cardOrder.forEach((cardIndex, index) => {
-                    const pos = positions[cardIndex];
-                    const cardData = cards[cardIndex];
-                    const startPos = getRandomPosition(config.width, config.height);
+                    readingContainer.setVisible(true);
+                })
+                .catch(error => {
+                    console.error('Error fetching interpretation:', error);
                     
-                    // Create card back first
-                    const card = this.add.image(startPos.x, startPos.y, 'card_back');
-                    card.setDisplaySize(cardWidth, cardHeight);
-                    card.setAngle(pos.angle);
-                    card.setAlpha(0);
+                    // Hide loading indicator
+                    loadingContainer.setVisible(false);
+                    loadingAnimation.remove();
+                    
+                    // Re-enable button in case of error so user can try again
+                    interpretButton.setInteractive({ useHandCursor: true });
+                    interpretButton.setAlpha(1);
+                    interpretButton.setColor('#ffd700');
+                    
+                    // Show error message
+                    const readingContent = document.getElementById('reading-content');
+                    if (readingContent) {
+                        readingContent.innerHTML = `The spirits are troubled: ${error.message || 'Please try again later.'}`;
+                    }
+                    readingContainer.setVisible(true);
+                });
+            });
 
-                    card.frontImage = cardData.name;
-                    card.isReversed = cardData.isReversed;
-                    placedCards[cardIndex] = card;
+            // Function to get CSRF token from cookies for Django
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
 
-                    this.time.delayedCall(index * 500, () => {
-                        card.setAlpha(1);
-                        this.tweens.add({
-                            targets: card,
-                            x: pos.x,
-                            y: pos.y,
-                            ease: 'Power2',
-                            duration: 500,
-                            onComplete: () => {
-                                if (index === cards.length - 1) {
-                                    this.time.delayedCall(1000, () => {
-                                        cardOrder.forEach((revealIndex, i) => {
-                                            this.time.delayedCall(i * 500, () => {
-                                                const placedCard = placedCards[revealIndex];
-                                                this.tweens.add({
-                                                    targets: placedCard,
-                                                    scaleX: 0,
-                                                    duration: 250,
-                                                    ease: 'Linear',
-                                                    onComplete: () => {
-                                                        placedCard.setTexture(placedCard.frontImage);
-                                                        placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                        if (placedCard.isReversed) {
-                                                            placedCard.setAngle(placedCard.angle + 180);
-                                                        }
-                                                        this.tweens.add({
-                                                            targets: placedCard,
-                                                            scaleX: 1,
-                                                            duration: 250,
-                                                            ease: 'Linear',
-                                                            onComplete: () => {
-                                                                placedCard.setInteractive();
-                                                                placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                                
-                                                                placedCard.on('pointerover', function() {
-                                                                    this.setTint(0xdddddd);
-                                                                    const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
-                                                                        fontSize: '14px',
-                                                                        fill: '#fff',
-                                                                        backgroundColor: '#000'
-                                                                    });
-                                                                    text.setOrigin(0.5);
-                                                                    this.positionText = text;
-                                                                });
-                                                                
-                                                                placedCard.on('pointerout', function() {
-                                                                    this.clearTint();
-                                                                    if (this.positionText) {
-                                                                        this.positionText.destroy();
-                                                                    }
-                                                                });
+            // Create sound objects
+            const dealSound = this.sound.add('dealSound', { volume: 0.5 });
+            const revealSound = this.sound.add('revealSound', { volume: 0.5 });
+            
+            // Configure sounds
+            dealSound.setRate(1.0);
+            revealSound.setRate(1.0);
+            
+            const cards = [
+                {% for card in cards %}
+                {
+                    name: '{{ card.name }}',
+                    isReversed: {{ card.is_reversed|lower }}
+                },
+                {% endfor %}
+            ];
 
-                                                                if (revealIndex === cardOrder[cardOrder.length - 1]) {
-                                                                    this.time.delayedCall(500, () => {
-                                                                        buttonBackground.setVisible(true);
-                                                                        interpretButton.setVisible(true);
-                                                                    });
-                                                                }
-                                                            }
-                                                        });
+            const scale = 1.0;
+            const cardWidth = 100 * scale;
+            const cardHeight = 160 * scale;
+            const spacing = 15 * scale;
+            const centerX = (config.width / 2) - cardWidth;
+            const centerY = config.height / 2;
+
+            // Celtic Cross positions
+            const positions = [
+                { x: centerX, y: centerY, title: "The Present", angle: 0 },
+                { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
+                { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
+                { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
+                { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
+                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
+                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
+            ];
+
+            // Place cards with animation
+            let placedCards = [];
+            
+            // Create placement order array
+            const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
+            
+            cardOrder.forEach((cardIndex, index) => {
+                const pos = positions[cardIndex];
+                const cardData = cards[cardIndex];
+                const startPos = getRandomPosition(config.width, config.height);
+                
+                // Create card back first
+                const card = this.add.image(startPos.x, startPos.y, 'card_back');
+                card.setDisplaySize(cardWidth, cardHeight);
+                card.setAngle(pos.angle);
+                card.setAlpha(0);
+
+                card.frontImage = cardData.name;
+                card.isReversed = cardData.isReversed;
+                placedCards[cardIndex] = card;
+
+                this.time.delayedCall(index * 500, () => {
+                    card.setAlpha(1);
+                    this.tweens.add({
+                        targets: card,
+                        x: pos.x,
+                        y: pos.y,
+                        ease: 'Power2',
+                        duration: 500,
+                        onComplete: () => {
+                            if (index === cards.length - 1) {
+                                this.time.delayedCall(1000, () => {
+                                    cardOrder.forEach((revealIndex, i) => {
+                                        this.time.delayedCall(i * 500, () => {
+                                            const placedCard = placedCards[revealIndex];
+                                            this.tweens.add({
+                                                targets: placedCard,
+                                                scaleX: 0,
+                                                duration: 250,
+                                                ease: 'Linear',
+                                                onComplete: () => {
+                                                    placedCard.setTexture(placedCard.frontImage);
+                                                    placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                    if (placedCard.isReversed) {
+                                                        placedCard.setAngle(placedCard.angle + 180);
                                                     }
-                                                });
+                                                    this.tweens.add({
+                                                        targets: placedCard,
+                                                        scaleX: 1,
+                                                        duration: 250,
+                                                        ease: 'Linear',
+                                                        onComplete: () => {
+                                                            placedCard.setInteractive();
+                                                            placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                            
+                                                            placedCard.on('pointerover', function() {
+                                                                this.setTint(0xdddddd);
+                                                                const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                    fontSize: '14px',
+                                                                    fill: '#fff',
+                                                                    backgroundColor: '#000'
+                                                                });
+                                                                text.setOrigin(0.5);
+                                                                this.positionText = text;
+                                                            });
+                                                            
+                                                            placedCard.on('pointerout', function() {
+                                                                this.clearTint();
+                                                                if (this.positionText) {
+                                                                    this.positionText.destroy();
+                                                                }
+                                                            });
+
+                                                            if (revealIndex === cardOrder[cardOrder.length - 1]) {
+                                                                this.time.delayedCall(500, () => {
+                                                                    buttonBackground.setVisible(true);
+                                                                    interpretButton.setVisible(true);
+                                                                });
+                                                            }
+                                                        }
+                                                    });
+                                                }
                                             });
                                         });
                                     });
-                                }
+                                });
                             }
-                        });
+                        }
                     });
                 });
             });
@@ -801,29 +638,84 @@
             <div id="game"></div>
         </div>
         <div class="game-info">
-            <h2>Pixel Tarot</h2>
-            <p>
-                Welcome to Pixel Tarot, a digital divination experience that blends classic tarot reading with retro pixel art aesthetics. 
-                This application allows you to consult the cards for guidance and insight into your questions.
-            </p>
-            <p>
-                The cards will be presented in a modified Celtic Cross spread, offering a comprehensive reading 
-                that explores various aspects of your inquiry.
-            </p>
-            <button id="startReadingBtn" class="btn btn-primary">Start Reading</button>
+            <div id="intro-content">
+                <h2>Pixel Tarot</h2>
+                <p>
+                    Welcome to Pixel Tarot, a digital divination experience that blends classic tarot reading with retro pixel art aesthetics. 
+                    This application allows you to consult the cards for guidance and insight into your questions.
+                </p>
+                <p>
+                    The cards will be presented in a modified Celtic Cross spread, offering a comprehensive reading 
+                    that explores various aspects of your inquiry.
+                </p>
+                <button id="startReadingBtn" class="btn btn-primary">Start Reading</button>
+            </div>
+            
+            <div id="question-content" style="display: none;">
+                <h2>Ask the Cards</h2>
+                <p>What guidance do you seek?</p>
+                <p>
+                    Frame your question thoughtfully.
+                    Be specific but avoid yes/no questions.
+                    Focus on guidance and insight.
+                </p>
+                <div class="question-form">
+                    <textarea id="tarotQuestion" maxlength="200" placeholder="Type your question here..."></textarea>
+                    <div class="char-counter"><span id="charCount">0</span>/200</div>
+                    <button id="consultBtn" class="btn btn-primary">Consult the Cards</button>
+                </div>
+            </div>
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Connect the Start Reading button to the game
+        // Handle character counter
+        const tarotQuestion = document.getElementById('tarotQuestion');
+        const charCount = document.getElementById('charCount');
+        
+        tarotQuestion.addEventListener('input', function() {
+            const currentLength = this.value.length;
+            charCount.textContent = currentLength;
+            
+            // Change color based on length
+            if (currentLength > 150) {
+                charCount.style.color = '#ff6b6b';
+            } else {
+                charCount.style.color = '#666666';
+            }
+        });
+
+        // Connect the Start Reading button to show question form
         document.getElementById('startReadingBtn').addEventListener('click', function() {
+            // Hide intro content and show question form
+            document.getElementById('intro-content').style.display = 'none';
+            document.getElementById('question-content').style.display = 'block';
+            
             if (gameInstance && gameInstance.scene.scenes[0]) {
                 const mainScene = gameInstance.scene.scenes[0];
-                // If the game is in start screen, move to question screen
+                // Move to next scene in game
                 if (mainScene.createQuestionScreen) {
                     mainScene.createQuestionScreen();
                 }
+            }
+        });
+        
+        // Connect the Consult the Cards button
+        document.getElementById('consultBtn').addEventListener('click', function() {
+            // Get the user's question
+            const question = tarotQuestion.value.trim();
+            
+            // Validate question
+            if (!question) {
+                alert('Please enter your question first.');
+                return;
+            }
+            
+            if (gameInstance && gameInstance.scene.scenes[0]) {
+                const mainScene = gameInstance.scene.scenes[0];
+                // Store the question for the game to use
+                mainScene.tarotQuestion = question;
             }
         });
     </script>
