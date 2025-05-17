@@ -136,7 +136,7 @@
                 .setDisplaySize(config.width, config.height);
                 
             // Store a reference to move to card screen later
-            this.showCardScreen = () => {
+            this.showCardScreen = (userQuestion) => {
                 questionBackground.destroy();
                 
                 // Add game background and continue with card dealing
@@ -269,6 +269,21 @@
                                                                         this.positionText.destroy();
                                                                     }
                                                                 });
+                                                                
+                                                                // When all cards are revealed
+                                                                if (revealIndex === cardOrder[cardOrder.length - 1]) {
+                                                                    this.time.delayedCall(500, () => {
+                                                                        // Hide question panel and show reading panel
+                                                                        document.getElementById('question-content').style.display = 'none';
+                                                                        
+                                                                        // Set user question as title
+                                                                        const userQuestionElement = document.getElementById('user-question');
+                                                                        userQuestionElement.textContent = userQuestion;
+                                                                        
+                                                                        // Show reading panel
+                                                                        document.getElementById('reading-panel').style.display = 'block';
+                                                                    });
+                                                                }
                                                             }
                                                         });
                                                     }
@@ -329,6 +344,12 @@
                     <button id="consultBtn" class="btn btn-primary">Consult the Cards</button>
                 </div>
             </div>
+            
+            <div id="reading-panel" style="display: none;">
+                <h2 id="user-question"></h2>
+                <p>The cards have been revealed. You may now interpret their meaning.</p>
+                <button id="interpretBtn" class="btn btn-primary">Interpret</button>
+            </div>
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -376,6 +397,10 @@
                 return;
             }
             
+            // Disable form elements
+            tarotQuestion.disabled = true;
+            this.disabled = true;
+            
             if (gameInstance && gameInstance.scene.scenes[0]) {
                 const mainScene = gameInstance.scene.scenes[0];
                 // Store the question for the game to use
@@ -383,9 +408,14 @@
                 
                 // Move to card screen
                 if (mainScene.showCardScreen) {
-                    mainScene.showCardScreen();
+                    mainScene.showCardScreen(question);
                 }
             }
+        });
+        
+        // Connect the Interpret button
+        document.getElementById('interpretBtn').addEventListener('click', function() {
+            alert('Interpret button clicked - add your interpretation functionality here');
         });
     </script>
 </body>

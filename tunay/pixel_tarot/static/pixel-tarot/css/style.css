@@ -109,8 +109,6 @@ body {
     font-size: 16px;
 }
 
-
-
 .question-form {
     width: 100%;
     display: flex;
@@ -118,7 +116,7 @@ body {
     align-items: center;
 }
 
-#startReadingBtn, #consultBtn {
+#startReadingBtn, #consultBtn, #interpretBtn {
     padding: 10px 20px;
     font-size: 18px;
     font-family: 'W95FA', sans-serif;
@@ -130,7 +128,16 @@ body {
     cursor: pointer;
 }
 
-#startReadingBtn:hover, #consultBtn:hover {
+#startReadingBtn:disabled, #consultBtn:disabled, #interpretBtn:disabled {
+    background-color: #999999;
+    cursor: not-allowed;
+}
+
+#consultBtn {
+    align-self: flex-start;
+}
+
+#startReadingBtn:hover, #consultBtn:hover, #interpretBtn:hover {
     background-color: #555555;
 }
 
@@ -151,12 +158,24 @@ body {
     margin-bottom: 10px;
 }
 
+#tarotQuestion:disabled {
+    background: rgba(240,240,240,0.7);
+    color: #777777;
+    border-color: #999999;
+}
+
 .char-counter {
     align-self: flex-end;
     font-family: 'W95FA', sans-serif;
     font-size: 14px;
     color: #666666;
     margin-bottom: 20px;
+}
+
+#user-question {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 @media screen and (max-width: 768px) {
