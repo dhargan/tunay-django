@@ -203,6 +203,10 @@
                 // Create placement order array
                 const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
                 
+                // Store card data for API access
+                this.placedCards = [];
+                this.cardOrder = cardOrder;
+                
                 cardOrder.forEach((cardIndex, index) => {
                     const pos = positions[cardIndex];
                     const cardData = cards[cardIndex];
@@ -217,6 +221,7 @@
                     card.frontImage = cardData.name;
                     card.isReversed = cardData.isReversed;
                     placedCards[cardIndex] = card;
+                    this.placedCards[cardIndex] = card;
 
                     this.time.delayedCall(index * 500, () => {
                         card.setAlpha(1);
@@ -347,8 +352,14 @@
             
             <div id="reading-panel" style="display: none;">
                 <h2 id="user-question"></h2>
-                <p>The cards have been revealed. You may now interpret their meaning.</p>
-                <button id="interpretBtn" class="btn btn-primary">Interpret</button>
+                <p id="instructions-text">The cards have been revealed. You may now interpret their meaning.</p>
+                <div id="interpretation-text" style="display: none;"></div>
+                <button id="interpretBtn" class="btn btn-primary">
+                    <span id="interpretBtnText">Interpret</span>
+                    <span id="loadingIndicator" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
             </div>
         </div>
     </div>
@@ -415,7 +426,96 @@
         
         // Connect the Interpret button
         document.getElementById('interpretBtn').addEventListener('click', function() {
-            alert('Interpret button clicked - add your interpretation functionality here');
+            // Get UI elements
+            const interpretBtn = this;
+            const btnText = document.getElementById('interpretBtnText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const instructionsText = document.getElementById('instructions-text');
+            const interpretationText = document.getElementById('interpretation-text');
+            
+            // Disable button and show loading
+            interpretBtn.disabled = true;
+            btnText.style.display = 'none';
+            loadingIndicator.style.display = 'inline-block';
+            
+            // Get the card data
+            const gameScene = gameInstance.scene.scenes[0];
+            const placedCards = gameScene.placedCards || [];
+            const cardOrder = gameScene.cardOrder || [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
+            
+            // Collect card data for the API request
+            const cardData = [];
+            cardOrder.forEach((cardIndex) => {
+                const card = placedCards[cardIndex];
+                if (card) {
+                    cardData.push({
+                        name: card.frontImage,
+                        is_reversed: card.isReversed
+                    });
+                }
+            });
+            
+            // Prepare the request data
+            const requestData = {
+                user_question: gameScene.tarotQuestion || "What guidance do the cards offer me?",
+                cards: cardData
+            };
+            
+            // Function to get CSRF token for Django
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            // Make API call to interpret endpoint
+            fetch('/api/pixel-tarot/interpret/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Error communicating with server');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loading and show interpretation
+                btnText.style.display = 'inline-block';
+                loadingIndicator.style.display = 'none';
+                interpretBtn.disabled = false;
+                
+                // Hide instructions text
+                instructionsText.style.display = 'none';
+                
+                // Format and display the interpretation
+                interpretationText.innerHTML = data.ai_response.replace(/\n/g, '<br>');
+                interpretationText.style.display = 'block';
+            })
+            .catch(error => {
+                // Reset button state
+                btnText.style.display = 'inline-block';
+                loadingIndicator.style.display = 'none';
+                interpretBtn.disabled = false;
+                
+                // Show error message
+                alert('Error: ' + (error.message || 'Failed to get interpretation. Please try again.'));
+            });
         });
     </script>
 </body>
