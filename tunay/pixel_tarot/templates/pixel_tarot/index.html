@@ -143,29 +143,6 @@
                 const background = this.add.image(config.width/2, config.height/2, 'background');
                 background.setDisplaySize(config.width, config.height);
 
-                // Add refresh button
-                const isMobile = window.innerWidth < 768;
-                const refreshX = isMobile ? config.width - 70 : config.width - 40;
-                const refreshButton = this.add.image(refreshX, 40, 'refresh');
-                refreshButton.setDisplaySize(40, 40);
-                refreshButton.setInteractive({ 
-                    hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
-                    hitAreaCallback: Phaser.Geom.Circle.Contains,
-                    useHandCursor: true 
-                });
-                
-                const refreshButtonScale = refreshButton.scale;
-                
-                refreshButton.on('pointerover', function() {
-                    this.setScale(refreshButtonScale * 1.1);
-                });
-                refreshButton.on('pointerout', function() {
-                    this.setScale(refreshButtonScale);
-                });
-                refreshButton.on('pointerdown', function() {
-                    location.reload();
-                });
-                
                 // Card layout and animation
                 const cards = [
                     {% for card in cards %}
