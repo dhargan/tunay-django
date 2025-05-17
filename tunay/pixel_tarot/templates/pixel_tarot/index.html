@@ -33,7 +33,7 @@
             type: Phaser.AUTO,
             scale: {
                 mode: Phaser.Scale.FIT,                
-                width: 600,   // <-- Size of the game
+                width: 600,   
                 height: 800,  
                 
                 min: {
@@ -72,33 +72,6 @@
         // Start game
         let gameInstance = null;
         window.onload = () => gameInstance = new Phaser.Game(config);
-
-        // Responsive settings
-        function getGameDimensions() {
-            const width = 600;
-            const height = 800;
-            const windowRatio = window.innerWidth / window.innerHeight;
-            const gameRatio = width / height;
-            
-            if (windowRatio < gameRatio) {
-                const scale = window.innerWidth / width;
-                return { width: width * scale, height: height * scale, scale };
-            } else {
-                const scale = window.innerHeight / height;
-                return { width: width * scale, height: height * scale, scale };
-            }
-        }
-
-        function updateGameSize() {
-            const gameDim = getGameDimensions();
-            const gameElement = document.getElementById('game');
-            gameElement.style.width = gameDim.width + 'px';
-            gameElement.style.height = gameDim.height + 'px';
-            return gameDim.scale;
-        }
-
-        window.addEventListener('load', updateGameSize);
-        window.addEventListener('resize', updateGameSize);
 
         // Load assets
         function preload() {
