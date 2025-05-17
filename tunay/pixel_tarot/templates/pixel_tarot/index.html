@@ -131,493 +131,157 @@
         }
 
         function createQuestionScreen() {
-            // Create question screen with background
+            // Create question screen with background only
             const questionBackground = this.add.image(config.width/2, config.height/2, 'background-2')
                 .setDisplaySize(config.width, config.height);
+                
+            // Store a reference to move to card screen later
+            this.showCardScreen = () => {
+                questionBackground.destroy();
+                
+                // Add game background and continue with card dealing
+                const background = this.add.image(config.width/2, config.height/2, 'background');
+                background.setDisplaySize(config.width, config.height);
 
-            // Since we're getting the question from outside the game, 
-            // we'll skip showing the question form and go straight to dealing cards
-            questionBackground.destroy();
-
-            // Add game background and continue with card dealing
-            const background = this.add.image(config.width/2, config.height/2, 'background');
-            background.setDisplaySize(config.width, config.height);
-
-            // Add refresh button
-            const isMobile = window.innerWidth < 768;
-            const refreshX = isMobile ? config.width - 70 : config.width - 40;
-            const refreshButton = this.add.image(refreshX, 40, 'refresh');
-            refreshButton.setDisplaySize(40, 40);
-            refreshButton.setInteractive({ 
-                hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
-                hitAreaCallback: Phaser.Geom.Circle.Contains,
-                useHandCursor: true 
-            });
-            const refreshButtonScale = refreshButton.scale;
-
-            refreshButton.on('pointerover', function() {
-                this.setScale(refreshButtonScale * 1.1);
-            });
-            refreshButton.on('pointerout', function() {
-                this.setScale(refreshButtonScale);
-            });
-            refreshButton.on('pointerdown', function() {
-                location.reload();
-            });
-
-            // Create interpret button (initially hidden)
-            const buttonWidth = 120;
-            const buttonHeight = 40;
-            const buttonX = 50;
-            const buttonY = config.height - 50;
-
-            const buttonBackground = this.add.graphics();
-            buttonBackground.fillStyle(0x808080, 0.6);
-            buttonBackground.lineStyle(2, 0x808080, 1);
-            buttonBackground.fillRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-            buttonBackground.strokeRoundedRect(buttonX, buttonY - buttonHeight, buttonWidth, buttonHeight, 8);
-            buttonBackground.setVisible(false);
-
-            const interpretButton = this.add.text(buttonX + buttonWidth/2, buttonY - buttonHeight/2, 'Interpret', {
-                fontFamily: 'W95FA',
-                fontSize: '20px',
-                color: '#ffd700',
-                padding: { x: 20, y: 10 }
-            });
-            interpretButton.setOrigin(0.5, 0.5);
-            interpretButton.setVisible(false);
-            interpretButton.setShadow(1, 1, 'rgba(0,0,0,0.8)', 1);
-            interpretButton.setInteractive({ useHandCursor: true });
-
-            // Create loading indicator (initially hidden)
-            const loadingContainer = this.add.container(config.width/2, config.height/2);
-            loadingContainer.setVisible(false);
-            loadingContainer.setDepth(1000);
-            
-            // Add semi-transparent background
-            const loadingBg = this.add.graphics();
-            loadingBg.fillStyle(0x000000, 0.7);
-            loadingBg.fillRect(-200, -100, 400, 200);
-            loadingContainer.add(loadingBg);
-            
-            // Loading text
-            const loadingText = this.add.text(0, -20, 'Consulting the spirits...', {
-                fontFamily: 'W95FA',
-                fontSize: '24px',
-                color: '#ffd700',
-                align: 'center'
-            });
-            loadingText.setOrigin(0.5);
-            loadingContainer.add(loadingText);
-            
-            // Loading animation dots
-            const loadingDots = this.add.text(0, 20, '...', {
-                fontFamily: 'W95FA',
-                fontSize: '32px',
-                color: '#ffd700'
-            });
-            loadingDots.setOrigin(0.5);
-            loadingContainer.add(loadingDots);
-            
-            // Create reading result container (initially hidden)
-            const readingContainer = this.add.container(config.width/2, config.height/2);
-            readingContainer.setVisible(false);
-            readingContainer.setDepth(1000);
-            
-            // Add semi-transparent background for reading
-            const readingBg = this.add.graphics();
-            readingBg.fillStyle(0x000000, 0.85);
-            readingBg.fillRoundedRect(-250, -300, 500, 600, 16);
-            readingBg.lineStyle(2, 0xffd700, 1);
-            readingBg.strokeRoundedRect(-250, -300, 500, 600, 16);
-            readingContainer.add(readingBg);
-            
-            // Reading title
-            const readingTitle = this.add.text(0, -270, 'Your Tarot Reading', {
-                fontFamily: 'W95FA',
-                fontSize: '28px',
-                color: '#ffd700'
-            });
-            readingTitle.setOrigin(0.5);
-            readingContainer.add(readingTitle);
-            
-            // Create a scrollable text area using DOM
-            const scrollableTextDiv = document.createElement('div');
-            scrollableTextDiv.style = `
-                width: 460px;
-                height: 480px;
-                padding: 20px;
-                overflow-y: auto;
-                scrollbar-width: thin;
-                scrollbar-color: #ffd700 #333;
-                font-family: W95FA;
-                font-size: 18px;
-                color: white;
-                text-align: center;
-                line-height: 1.6;
-                background-color: transparent;
-            `;
-            
-            // Custom scrollbar for webkit browsers
-            scrollableTextDiv.innerHTML = `
-                <style>
-                    ::-webkit-scrollbar {
-                        width: 8px;
-                    }
-                    ::-webkit-scrollbar-track {
-                        background: #333;
-                        border-radius: 4px;
-                    }
-                    ::-webkit-scrollbar-thumb {
-                        background: #ffd700;
-                        border-radius: 4px;
-                    }
-                    ::-webkit-scrollbar-thumb:hover {
-                        background: #ffea00;
-                    }
-                </style>
-                <div id="reading-content"></div>
-            `;
-            
-            // Position the scrollable container right below the title
-            // Center it horizontally, and place it vertically below the title with some margin
-            const scrollElement = this.add.dom(0, -150, scrollableTextDiv);
-            scrollElement.setOrigin(0.5, 0);  // Set origin to top-center so it starts from the exact position
-            readingContainer.add(scrollElement);
-            
-            // Animate loading dots
-            const animateLoadingDots = () => {
-                let count = 0;
-                return this.time.addEvent({
-                    delay: 500,
-                    callback: () => {
-                        count = (count + 1) % 4;
-                        let dots = '';
-                        for (let i = 0; i < count; i++) {
-                            dots += '.';
-                        }
-                        loadingDots.setText(dots);
+                // Add refresh button
+                const isMobile = window.innerWidth < 768;
+                const refreshX = isMobile ? config.width - 70 : config.width - 40;
+                const refreshButton = this.add.image(refreshX, 40, 'refresh');
+                refreshButton.setDisplaySize(40, 40);
+                refreshButton.setInteractive({ 
+                    hitArea: new Phaser.Geom.Circle(27.5, 27.5, 35),
+                    hitAreaCallback: Phaser.Geom.Circle.Contains,
+                    useHandCursor: true 
+                });
+                
+                const refreshButtonScale = refreshButton.scale;
+                
+                refreshButton.on('pointerover', function() {
+                    this.setScale(refreshButtonScale * 1.1);
+                });
+                refreshButton.on('pointerout', function() {
+                    this.setScale(refreshButtonScale);
+                });
+                refreshButton.on('pointerdown', function() {
+                    location.reload();
+                });
+                
+                // Card layout and animation
+                const cards = [
+                    {% for card in cards %}
+                    {
+                        name: '{{ card.name }}',
+                        isReversed: {{ card.is_reversed|lower }}
                     },
-                    loop: true
-                });
-            };
-            
-            // Handle interpret button click
-            interpretButton.on('pointerdown', () => {
-                // Disable the button immediately
-                interpretButton.disableInteractive();
-                interpretButton.setAlpha(0.5);
-                interpretButton.setColor('#888888');
+                    {% endfor %}
+                ];
+
+                const scale = 1.0;
+                const cardWidth = 100 * scale;
+                const cardHeight = 160 * scale;
+                const spacing = 15 * scale;
+                const centerX = (config.width / 2) - cardWidth;
+                const centerY = config.height / 2;
+
+                // Celtic Cross positions
+                const positions = [
+                    { x: centerX, y: centerY, title: "The Present", angle: 0 },
+                    { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
+                    { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
+                    { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
+                    { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
+                    { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
+                    { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
+                ];
+
+                // Place cards with animation
+                let placedCards = [];
                 
-                // Show loading indicator
-                loadingContainer.setVisible(true);
+                // Create placement order array
+                const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
                 
-                // Start loading animation
-                const loadingAnimation = animateLoadingDots();
-                
-                // Collect card data for the API request
-                const cardData = [];
-                cardOrder.forEach((cardIndex) => {
-                    const card = placedCards[cardIndex];
-                    cardData.push({
-                        name: card.frontImage,
-                        is_reversed: card.isReversed
-                    });
-                });
-                
-                // Prepare the POST request
-                const requestData = {
-                    user_question: this.tarotQuestion || "What guidance do the cards offer me?",
-                    cards: cardData
-                };
-                
-                // Function to wrap text at 50 characters max per line
-                function wrapTextAt50Chars(text) {
-                    const maxLineLength = 50;
-                    // Split text into lines (by existing line breaks)
-                    const lines = text.split('\n');
+                cardOrder.forEach((cardIndex, index) => {
+                    const pos = positions[cardIndex];
+                    const cardData = cards[cardIndex];
+                    const startPos = getRandomPosition(config.width, config.height);
                     
-                    // Process each line
-                    const wrappedLines = lines.map(line => {
-                        // If line is already short enough, return it as is
-                        if (line.length <= maxLineLength) {
-                            return line;
-                        }
-                        
-                        const words = line.split(' ');
-                        let currentLine = '';
-                        const resultLines = [];
-                        
-                        // Process each word
-                        for (const word of words) {
-                            // If adding this word exceeds max length, start a new line
-                            if (currentLine.length + word.length + 1 > maxLineLength) {
-                                if (currentLine) {
-                                    resultLines.push(currentLine);
-                                }
-                                
-                                // If the word itself is longer than maxLineLength, split it
-                                if (word.length > maxLineLength) {
-                                    let remainingWord = word;
-                                    while (remainingWord.length > maxLineLength) {
-                                        resultLines.push(remainingWord.substring(0, maxLineLength));
-                                        remainingWord = remainingWord.substring(maxLineLength);
-                                    }
-                                    currentLine = remainingWord;
-                                } else {
-                                    currentLine = word;
-                                }
-                            } else {
-                                // Add word to current line
-                                if (currentLine) {
-                                    currentLine += ' ' + word;
-                                } else {
-                                    currentLine = word;
-                                }
-                            }
-                        }
-                        
-                        // Add the last line if it has content
-                        if (currentLine) {
-                            resultLines.push(currentLine);
-                        }
-                        
-                        return resultLines.join('\n');
-                    });
-                    
-                    return wrappedLines.join('\n');
-                }
-                
-                // Make API call to the interpret endpoint
-                fetch('/api/pixel-tarot/interpret/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken') // Django CSRF token function
-                    },
-                    body: JSON.stringify(requestData)
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.message || 'Network response was not ok');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Hide loading indicator
-                    loadingContainer.setVisible(false);
-                    loadingAnimation.remove();
-                    
-                    // Display the reading in scrollable div
-                    const readingContent = document.getElementById('reading-content');
-                    if (readingContent) {
-                        // Check if mobile device
-                        if (window.innerWidth < 768) {
-                            readingContent.style.fontSize = '12px';
-                            const mobileWidth = Math.max(window.innerWidth * 0.8, 280);
-                            scrollableTextDiv.style.width = mobileWidth + 'px';
-                            
-                            // Set panel height relative to screen size
-                            const panelHeight = Math.min(window.innerHeight * 0.7, 600);
-                            
-                            // Set content height relative to panel height (70% of panel)
-                            const contentHeight = panelHeight * 0.55;
-                            scrollableTextDiv.style.height = contentHeight + 'px';
-                            
-                            // Move content slightly to the right
-                            scrollableTextDiv.style.paddingLeft = '30px';
-                            scrollableTextDiv.style.paddingRight = '10px';
-                            scrollableTextDiv.style.boxSizing = 'border-box';
-                            
-                            // Adjust container for mobile
-                            readingBg.clear();
-                            readingBg.fillStyle(0x000000, 0.85);
-                            const bgWidth = mobileWidth + 40;
-                            readingBg.fillRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
-                            readingBg.lineStyle(2, 0xffd700, 1);
-                            readingBg.strokeRoundedRect(-bgWidth/2, -panelHeight/2, bgWidth, panelHeight, 16);
-                            
-                            // Reposition elements - no closeButton anymore
-                            readingTitle.setPosition(0, -panelHeight/2 + 30);
-                            scrollElement.setPosition(0, -panelHeight/2 + 150);
-                            
-                            // For mobile, wrap text at 50 chars max per line
-                            const wrappedText = wrapTextAt50Chars(data.ai_response);
-                            readingContent.innerHTML = wrappedText.replace(/\n/g, '<br>');
-                        } else {
-                            readingContent.innerHTML = data.ai_response.replace(/\n/g, '<br>');
-                        }
-                    }
-                    readingContainer.setVisible(true);
-                })
-                .catch(error => {
-                    console.error('Error fetching interpretation:', error);
-                    
-                    // Hide loading indicator
-                    loadingContainer.setVisible(false);
-                    loadingAnimation.remove();
-                    
-                    // Re-enable button in case of error so user can try again
-                    interpretButton.setInteractive({ useHandCursor: true });
-                    interpretButton.setAlpha(1);
-                    interpretButton.setColor('#ffd700');
-                    
-                    // Show error message
-                    const readingContent = document.getElementById('reading-content');
-                    if (readingContent) {
-                        readingContent.innerHTML = `The spirits are troubled: ${error.message || 'Please try again later.'}`;
-                    }
-                    readingContainer.setVisible(true);
-                });
-            });
+                    // Create card back first
+                    const card = this.add.image(startPos.x, startPos.y, 'card_back');
+                    card.setDisplaySize(cardWidth, cardHeight);
+                    card.setAngle(pos.angle);
+                    card.setAlpha(0);
 
-            // Function to get CSRF token from cookies for Django
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
+                    card.frontImage = cardData.name;
+                    card.isReversed = cardData.isReversed;
+                    placedCards[cardIndex] = card;
 
-            // Create sound objects
-            const dealSound = this.sound.add('dealSound', { volume: 0.5 });
-            const revealSound = this.sound.add('revealSound', { volume: 0.5 });
-            
-            // Configure sounds
-            dealSound.setRate(1.0);
-            revealSound.setRate(1.0);
-            
-            const cards = [
-                {% for card in cards %}
-                {
-                    name: '{{ card.name }}',
-                    isReversed: {{ card.is_reversed|lower }}
-                },
-                {% endfor %}
-            ];
-
-            const scale = 1.0;
-            const cardWidth = 100 * scale;
-            const cardHeight = 160 * scale;
-            const spacing = 15 * scale;
-            const centerX = (config.width / 2) - cardWidth;
-            const centerY = config.height / 2;
-
-            // Celtic Cross positions
-            const positions = [
-                { x: centerX, y: centerY, title: "The Present", angle: 0 },
-                { x: centerX, y: centerY, title: "The Challenge", angle: 90 },
-                { x: centerX, y: centerY + cardHeight + spacing, title: "The Foundation", angle: 0 },
-                { x: centerX - cardWidth - spacing, y: centerY, title: "The Past", angle: 0 },
-                { x: centerX + cardWidth + spacing, y: centerY, title: "The Future", angle: 0 },
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight * 1.5 + spacing, title: "Your Influence", angle: 0 },
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY + cardHeight/2, title: "External Forces", angle: 0 },
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight/2, title: "Hopes and Fears", angle: 0 },
-                { x: centerX, y: centerY - cardHeight - spacing, title: "Environment", angle: 0 },
-                { x: centerX + cardWidth * 2 + spacing * 2, y: centerY - cardHeight * 1.5 - spacing, title: "The Outcome", angle: 0 }
-            ];
-
-            // Place cards with animation
-            let placedCards = [];
-            
-            // Create placement order array
-            const cardOrder = [0, 1, 2, 3, 4, 8, 5, 6, 7, 9];
-            
-            cardOrder.forEach((cardIndex, index) => {
-                const pos = positions[cardIndex];
-                const cardData = cards[cardIndex];
-                const startPos = getRandomPosition(config.width, config.height);
-                
-                // Create card back first
-                const card = this.add.image(startPos.x, startPos.y, 'card_back');
-                card.setDisplaySize(cardWidth, cardHeight);
-                card.setAngle(pos.angle);
-                card.setAlpha(0);
-
-                card.frontImage = cardData.name;
-                card.isReversed = cardData.isReversed;
-                placedCards[cardIndex] = card;
-
-                this.time.delayedCall(index * 500, () => {
-                    card.setAlpha(1);
-                    this.tweens.add({
-                        targets: card,
-                        x: pos.x,
-                        y: pos.y,
-                        ease: 'Power2',
-                        duration: 500,
-                        onComplete: () => {
-                            if (index === cards.length - 1) {
-                                this.time.delayedCall(1000, () => {
-                                    cardOrder.forEach((revealIndex, i) => {
-                                        this.time.delayedCall(i * 500, () => {
-                                            const placedCard = placedCards[revealIndex];
-                                            this.tweens.add({
-                                                targets: placedCard,
-                                                scaleX: 0,
-                                                duration: 250,
-                                                ease: 'Linear',
-                                                onComplete: () => {
-                                                    placedCard.setTexture(placedCard.frontImage);
-                                                    placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                    if (placedCard.isReversed) {
-                                                        placedCard.setAngle(placedCard.angle + 180);
-                                                    }
-                                                    this.tweens.add({
-                                                        targets: placedCard,
-                                                        scaleX: 1,
-                                                        duration: 250,
-                                                        ease: 'Linear',
-                                                        onComplete: () => {
-                                                            placedCard.setInteractive();
-                                                            placedCard.setDisplaySize(cardWidth, cardHeight);
-                                                            
-                                                            placedCard.on('pointerover', function() {
-                                                                this.setTint(0xdddddd);
-                                                                const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
-                                                                    fontSize: '14px',
-                                                                    fill: '#fff',
-                                                                    backgroundColor: '#000'
+                    this.time.delayedCall(index * 500, () => {
+                        card.setAlpha(1);
+                        this.tweens.add({
+                            targets: card,
+                            x: pos.x,
+                            y: pos.y,
+                            ease: 'Power2',
+                            duration: 500,
+                            onComplete: () => {
+                                if (index === cards.length - 1) {
+                                    this.time.delayedCall(1000, () => {
+                                        cardOrder.forEach((revealIndex, i) => {
+                                            this.time.delayedCall(i * 500, () => {
+                                                const placedCard = placedCards[revealIndex];
+                                                this.tweens.add({
+                                                    targets: placedCard,
+                                                    scaleX: 0,
+                                                    duration: 250,
+                                                    ease: 'Linear',
+                                                    onComplete: () => {
+                                                        placedCard.setTexture(placedCard.frontImage);
+                                                        placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                        if (placedCard.isReversed) {
+                                                            placedCard.setAngle(placedCard.angle + 180);
+                                                        }
+                                                        this.tweens.add({
+                                                            targets: placedCard,
+                                                            scaleX: 1,
+                                                            duration: 250,
+                                                            ease: 'Linear',
+                                                            onComplete: () => {
+                                                                placedCard.setInteractive();
+                                                                placedCard.setDisplaySize(cardWidth, cardHeight);
+                                                                
+                                                                placedCard.on('pointerover', function() {
+                                                                    this.setTint(0xdddddd);
+                                                                    const text = this.scene.add.text(this.x, this.y + cardHeight/2 + 10, positions[revealIndex].title, {
+                                                                        fontSize: '14px',
+                                                                        fill: '#fff',
+                                                                        backgroundColor: '#000'
+                                                                    });
+                                                                    text.setOrigin(0.5);
+                                                                    this.positionText = text;
                                                                 });
-                                                                text.setOrigin(0.5);
-                                                                this.positionText = text;
-                                                            });
-                                                            
-                                                            placedCard.on('pointerout', function() {
-                                                                this.clearTint();
-                                                                if (this.positionText) {
-                                                                    this.positionText.destroy();
-                                                                }
-                                                            });
-
-                                                            if (revealIndex === cardOrder[cardOrder.length - 1]) {
-                                                                this.time.delayedCall(500, () => {
-                                                                    buttonBackground.setVisible(true);
-                                                                    interpretButton.setVisible(true);
+                                                                
+                                                                placedCard.on('pointerout', function() {
+                                                                    this.clearTint();
+                                                                    if (this.positionText) {
+                                                                        this.positionText.destroy();
+                                                                    }
                                                                 });
                                                             }
-                                                        }
-                                                    });
-                                                }
+                                                        });
+                                                    }
+                                                });
                                             });
                                         });
                                     });
-                                });
+                                }
                             }
-                        }
+                        });
                     });
                 });
-            });
+            };
         }
     </script>
 </head>
@@ -716,6 +380,11 @@
                 const mainScene = gameInstance.scene.scenes[0];
                 // Store the question for the game to use
                 mainScene.tarotQuestion = question;
+                
+                // Move to card screen
+                if (mainScene.showCardScreen) {
+                    mainScene.showCardScreen();
+                }
             }
         });
     </script>
