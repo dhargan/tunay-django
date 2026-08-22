@@ -32,3 +32,19 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f'{self.asset} {self.transaction_date}'
+
+
+class MonthlyPortfolioSnapshot(models.Model):
+    year = models.IntegerField()
+    month = models.IntegerField()
+    asset_code = models.CharField(max_length=10, choices=AssetType.choices)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost_try = models.DecimalField(max_digits=12, decimal_places=2)
+    market_value_try = models.DecimalField(max_digits=12, decimal_places=2)
+    pnl_try = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        unique_together = ('year', 'month', 'asset_code')
+
+    def __str__(self):
+        return f'{self.asset_code} {self.year}-{self.month:02d}'

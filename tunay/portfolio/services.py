@@ -7,7 +7,12 @@ from decimal import Decimal, ROUND_HALF_UP
 import yfinance as yf
 from django.utils import timezone
 
-from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction
+from tunay.portfolio.models import (
+    AssetType,
+    HistoricalPrice,
+    MonthlyPortfolioSnapshot,
+    Transaction,
+)
 
 USDTRY_SYMBOL = 'USDTRY=X'
 GOLD_FUTURES_SYMBOL = 'GC=F'
@@ -213,7 +218,7 @@ class TransactionService:
         transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
-        return Transaction.objects.create(
+        created = Transaction.objects.create(
             asset=asset_code,
             amount=amount,
             total_paid_try=total_paid_try,
@@ -225,6 +230,8 @@ class TransactionService:
             ),
             transaction_date=transaction_date,
         )
+        self._refresh_monthly_snapshots()
+        return created
 
     def update_transaction(
         self,
@@ -249,7 +256,15 @@ class TransactionService:
             transaction_date,
         )
         transaction.save()
+        self._refresh_monthly_snapshots()
         return transaction
+
+    def delete_transaction(self, transaction: Transaction) -> None:
+        transaction.delete()
+        self._refresh_monthly_snapshots()
+
+    def _refresh_monthly_snapshots(self) -> None:
+        PortfolioAnalyticsService(price_service=self.price_service).recalculate_monthly_snapshots()
 
 
 class PortfolioAnalyticsService:
@@ -308,71 +323,72 @@ class PortfolioAnalyticsService:
         }
 
     def get_monthly_pnl_breakdown(self) -> dict[str, list]:
-        transactions = list(Transaction.objects.all().order_by('transaction_date'))
+        snapshots = MonthlyPortfolioSnapshot.objects.order_by('year', 'month', 'asset_code')
+        by_month: dict[tuple[int, int], dict[str, float]] = {}
+        for snapshot in snapshots:
+            key = (snapshot.year, snapshot.month)
+            if key not in by_month:
+                by_month[key] = {'USD': 0.0, 'GA': 0.0}
+            by_month[key][snapshot.asset_code] = float(snapshot.pnl_try)
+
+        months = []
+        usd_pnl = []
+        ga_pnl = []
+        for year, month in by_month:
+            months.append(self._month_label(datetime.date(year, month, 1)))
+            usd_pnl.append(by_month[(year, month)]['USD'])
+            ga_pnl.append(by_month[(year, month)]['GA'])
+        return {
+            'months': months,
+            'usd_pnl': usd_pnl,
+            'ga_pnl': ga_pnl,
+        }
+
+    def recalculate_monthly_snapshots(self) -> None:
+        MonthlyPortfolioSnapshot.objects.all().delete()
+        transactions = list(Transaction.objects.order_by('transaction_date'))
         if not transactions:
-            return {'months': [], 'usd_pnl': [], 'ga_pnl': []}
+            return
 
         today = timezone.localdate()
         month_starts = self._month_range(
             transactions[0].transaction_date.replace(day=1),
             today.replace(day=1),
         )
-        usd_pnl = []
-        ga_pnl = []
-        labels = []
+        snapshots = []
         for month_start in month_starts:
-            labels.append(self._month_label(month_start))
-            usd_pnl.append(self._monthly_asset_pnl(transactions, AssetType.USD, month_start, today))
-            ga_pnl.append(self._monthly_asset_pnl(transactions, AssetType.GA, month_start, today))
-        return {
-            'months': labels,
-            'usd_pnl': usd_pnl,
-            'ga_pnl': ga_pnl,
-        }
+            as_of = min(self._month_end(month_start), today)
+            for asset_code in AssetType.values:
+                total_amount = Decimal('0')
+                total_cost_try = Decimal('0')
+                for transaction in transactions:
+                    if transaction.asset != asset_code:
+                        continue
+                    if transaction.transaction_date > as_of:
+                        continue
+                    total_amount += transaction.amount
+                    total_cost_try += transaction.total_paid_try
 
-    def _monthly_asset_pnl(
-        self,
-        transactions: list[Transaction],
-        asset_code: str,
-        month_start: datetime.date,
-        today: datetime.date,
-    ) -> float:
-        month_end = self._month_end(month_start)
-        is_current_month = month_start.year == today.year and month_start.month == today.month
-        as_of = today if is_current_month else month_end
-        previous_end = month_start - datetime.timedelta(days=1)
-
-        start_qty = Decimal('0')
-        end_qty = Decimal('0')
-        invested = Decimal('0')
-        for transaction in transactions:
-            if transaction.asset != asset_code:
-                continue
-            if transaction.transaction_date <= previous_end:
-                start_qty += transaction.amount
-            if transaction.transaction_date <= as_of:
-                end_qty += transaction.amount
-            if month_start <= transaction.transaction_date <= as_of:
-                invested += transaction.total_paid_try
-
-        if start_qty == 0 and end_qty == 0:
-            return 0.0
-
-        start_value = Decimal('0')
-        if start_qty:
-            start_value = start_qty * self._price_on(asset_code, previous_end)
-        if is_current_month:
-            end_price = self.price_service.get_current_price(asset_code)
-        else:
-            end_price = self._price_on(asset_code, as_of)
-        end_value = end_qty * end_price
-        return float(_to_decimal(end_value - start_value - invested, MONEY_QUANTUM))
-
-    def _price_on(self, asset_code: str, date: datetime.date) -> Decimal:
-        try:
-            return self.price_service.get_historical_price(asset_code, date)
-        except PriceFetchError:
-            return Decimal('0')
+                market_value_try = Decimal('0')
+                if total_amount:
+                    try:
+                        price = self.price_service.get_historical_price(asset_code, as_of)
+                    except PriceFetchError:
+                        price = Decimal('0')
+                    market_value_try = _to_decimal(total_amount * price, MONEY_QUANTUM)
+                total_cost_try = _to_decimal(total_cost_try, MONEY_QUANTUM)
+                snapshots.append(
+                    MonthlyPortfolioSnapshot(
+                        year=month_start.year,
+                        month=month_start.month,
+                        asset_code=asset_code,
+                        total_amount=_to_decimal(total_amount),
+                        total_cost_try=total_cost_try,
+                        market_value_try=market_value_try,
+                        pnl_try=_to_decimal(market_value_try - total_cost_try, MONEY_QUANTUM),
+                    )
+                )
+        MonthlyPortfolioSnapshot.objects.bulk_create(snapshots)
 
     @staticmethod
     def _month_end(month_start: datetime.date) -> datetime.date:

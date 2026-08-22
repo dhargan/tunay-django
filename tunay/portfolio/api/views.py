@@ -20,15 +20,13 @@ from tunay.portfolio.services import (
 class DashboardAPIView(APIView):
     def get(self, request):
         metrics = PortfolioAnalyticsService().calculate_cumulative_pnl()
+        metrics['monthly_pnl'] = PortfolioAnalyticsService().get_monthly_pnl_breakdown()
         price_service = PriceService()
         try:
             metrics['live_rates'] = {
                 'USD': price_service.get_live_quote('USD'),
                 'GA': price_service.get_live_quote('GA'),
             }
-            metrics['monthly_pnl'] = PortfolioAnalyticsService(
-                price_service=price_service,
-            ).get_monthly_pnl_breakdown()
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(metrics)
@@ -92,3 +90,8 @@ class TransactionViewSet(ModelViewSet):
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(TransactionDetailSerializer(saved).data, status=success_status)
+
+    def destroy(self, request, *args, **kwargs):
+        transaction = self.get_object()
+        TransactionService().delete_transaction(transaction)
+        return Response(status=status.HTTP_204_NO_CONTENT)
