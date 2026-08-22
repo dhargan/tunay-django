@@ -98,6 +98,14 @@ class YFinanceFetcher:
         return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
 
     def _fetch_symbol_snapshot(self, symbol: str) -> tuple[Decimal, Decimal]:
+        try:
+            return self._fetch_symbol_snapshot_unsafe(symbol)
+        except PriceFetchError:
+            raise
+        except Exception as exc:
+            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
+
+    def _fetch_symbol_snapshot_unsafe(self, symbol: str) -> tuple[Decimal, Decimal]:
         ticker = yf.Ticker(symbol)
         current = None
         previous_close = None
@@ -135,6 +143,14 @@ class YFinanceFetcher:
         return _quote_from_prices(price, previous_close)
 
     def _fetch_symbol_current(self, symbol: str) -> Decimal:
+        try:
+            return self._fetch_symbol_current_unsafe(symbol)
+        except PriceFetchError:
+            raise
+        except Exception as exc:
+            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
+
+    def _fetch_symbol_current_unsafe(self, symbol: str) -> Decimal:
         ticker = yf.Ticker(symbol)
         try:
             last_price = ticker.fast_info.last_price
@@ -149,6 +165,14 @@ class YFinanceFetcher:
         return _to_decimal(history['Close'].iloc[-1])
 
     def _fetch_symbol_close(self, symbol: str, date: datetime.date) -> Decimal:
+        try:
+            return self._fetch_symbol_close_unsafe(symbol, date)
+        except PriceFetchError:
+            raise
+        except Exception as exc:
+            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
+
+    def _fetch_symbol_close_unsafe(self, symbol: str, date: datetime.date) -> Decimal:
         start = date - datetime.timedelta(days=HISTORY_LOOKBACK_DAYS)
         end = date + datetime.timedelta(days=1)
         history = yf.Ticker(symbol).history(start=start, end=end, auto_adjust=True)

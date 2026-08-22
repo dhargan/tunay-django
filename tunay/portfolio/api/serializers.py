@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from tunay.portfolio.models import AssetType, Transaction
-from tunay.portfolio.services import PortfolioAnalyticsService
+from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction
+from tunay.portfolio.services import PortfolioAnalyticsService, PriceFetchError
 
 
 class TransactionCreateSerializer(serializers.Serializer):
@@ -51,9 +51,30 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
 
     def _pnl(self, transaction: Transaction) -> dict:
         if transaction.pk not in self._pnl_cache:
-            self._pnl_cache[transaction.pk] = self._analytics.calculate_transaction_pnl(
-                transaction
-            )
+            try:
+                self._pnl_cache[transaction.pk] = self._analytics.calculate_transaction_pnl(
+                    transaction
+                )
+            except PriceFetchError:
+                last_price = (
+                    HistoricalPrice.objects.filter(asset=transaction.asset)
+                    .order_by('-date')
+                    .values_list('price_try', flat=True)
+                    .first()
+                )
+                if last_price is None:
+                    raise
+                current_value = transaction.amount * last_price
+                pnl_try = current_value - transaction.total_paid_try
+                self._pnl_cache[transaction.pk] = {
+                    'current_value': current_value,
+                    'pnl_try': pnl_try,
+                    'pnl_percentage': self._analytics._pnl_percentage(
+                        pnl_try,
+                        transaction.total_paid_try,
+                    ),
+                    'spread_fee_try': transaction.spread_fee_try,
+                }
         return self._pnl_cache[transaction.pk]
 
     def get_current_value(self, obj: Transaction):

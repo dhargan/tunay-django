@@ -10,7 +10,6 @@ from tunay.portfolio.api.serializers import (
 from tunay.portfolio.models import AssetType, Transaction
 from tunay.portfolio.services import (
     PriceFetchError,
-    PriceService,
     PortfolioAnalyticsService,
     TransactionService,
     UnknownAssetError,
@@ -19,16 +18,17 @@ from tunay.portfolio.services import (
 
 class DashboardAPIView(APIView):
     def get(self, request):
-        metrics = PortfolioAnalyticsService().calculate_cumulative_pnl()
-        metrics['monthly_pnl'] = PortfolioAnalyticsService().get_monthly_pnl_breakdown()
-        price_service = PriceService()
+        analytics = PortfolioAnalyticsService()
         try:
+            metrics = analytics.calculate_cumulative_pnl()
+            price_service = analytics.price_service
             metrics['live_rates'] = {
                 'USD': price_service.get_live_quote('USD'),
                 'GA': price_service.get_live_quote('GA'),
             }
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+        metrics['monthly_pnl'] = analytics.get_monthly_pnl_breakdown()
         return Response(metrics)
 
 
