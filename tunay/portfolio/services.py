@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import datetime
-import math
 from decimal import Decimal, ROUND_HALF_UP
 
 import yfinance as yf
-from django.utils import timezone
 
 from tunay.portfolio.models import Asset, HistoricalPrice, Transaction
 
@@ -13,15 +11,9 @@ USDTRY_SYMBOL = 'USDTRY=X'
 GOLD_FUTURES_SYMBOL = 'GC=F'
 TROY_OUNCE_GRAMS = Decimal('31.1034768')
 SUPPORTED_ASSETS = frozenset({'USD', 'GA'})
+HISTORY_LOOKBACK_DAYS = 21
 PRICE_QUANTUM = Decimal('0.0001')
 MONEY_QUANTUM = Decimal('0.01')
-INTERVAL_LOOKBACK = {
-    '1m': datetime.timedelta(days=3),
-    '5m': datetime.timedelta(days=5),
-    '15m': datetime.timedelta(days=7),
-    '1h': datetime.timedelta(days=14),
-    '1d': datetime.timedelta(days=21),
-}
 
 
 class PriceFetchError(Exception):
@@ -54,39 +46,22 @@ def _get_asset(asset_code: str) -> Asset:
         raise UnknownAssetError(f'Asset {asset_code} is not registered') from exc
 
 
-def _ensure_aware(when: datetime.datetime) -> datetime.datetime:
-    if timezone.is_naive(when):
-        return timezone.make_aware(when)
-    return when
-
-
-def _cache_timestamp(when: datetime.datetime) -> datetime.datetime:
-    return _ensure_aware(when).replace(second=0, microsecond=0)
-
-
-def _to_utc(when: datetime.datetime) -> datetime.datetime:
-    return _ensure_aware(when).astimezone(datetime.timezone.utc)
-
-
-def _bar_utc(timestamp) -> datetime.datetime:
-    if getattr(timestamp, 'tzinfo', None) is None:
-        dt = timestamp.to_pydatetime() if hasattr(timestamp, 'to_pydatetime') else timestamp
-        return dt.replace(tzinfo=datetime.timezone.utc)
-    converted = timestamp.tz_convert('UTC') if hasattr(timestamp, 'tz_convert') else timestamp
-    return converted.to_pydatetime()
+def _as_date(value: datetime.date | datetime.datetime) -> datetime.date:
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    return value
 
 
 class YFinanceFetcher:
     def fetch_price(
         self,
         asset_code: str,
-        when: datetime.datetime | None = None,
+        date: datetime.date | None = None,
     ) -> Decimal:
         _require_asset_code(asset_code)
-        if when is None:
+        if date is None:
             return self._current_asset_price(asset_code)
-        when = _ensure_aware(when)
-        return self._historical_asset_price(asset_code, when)
+        return self._historical_asset_price(asset_code, _as_date(date))
 
     def _current_asset_price(self, asset_code: str) -> Decimal:
         if asset_code == 'USD':
@@ -95,11 +70,11 @@ class YFinanceFetcher:
         usdtry = self._fetch_symbol_current(USDTRY_SYMBOL)
         return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
 
-    def _historical_asset_price(self, asset_code: str, when: datetime.datetime) -> Decimal:
+    def _historical_asset_price(self, asset_code: str, date: datetime.date) -> Decimal:
         if asset_code == 'USD':
-            return self._fetch_symbol_at(USDTRY_SYMBOL, when)
-        gold_usd = self._fetch_symbol_at(GOLD_FUTURES_SYMBOL, when)
-        usdtry = self._fetch_symbol_at(USDTRY_SYMBOL, when)
+            return self._fetch_symbol_close(USDTRY_SYMBOL, date)
+        gold_usd = self._fetch_symbol_close(GOLD_FUTURES_SYMBOL, date)
+        usdtry = self._fetch_symbol_close(USDTRY_SYMBOL, date)
         return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
 
     def _fetch_symbol_current(self, symbol: str) -> Decimal:
@@ -111,70 +86,25 @@ class YFinanceFetcher:
         except (KeyError, AttributeError, TypeError, ValueError):
             pass
 
-        history = ticker.history(period='5d', interval='1m')
-        if history.empty:
-            history = ticker.history(period='5d')
+        history = ticker.history(period='5d')
         if history.empty or 'Close' not in history:
             raise PriceFetchError(f'No current price available for {symbol}')
         return _to_decimal(history['Close'].iloc[-1])
 
-    def _intervals_for(self, when: datetime.datetime) -> list[str]:
-        age = timezone.now() - when
-        if age <= datetime.timedelta(days=7):
-            return ['1m', '5m', '1h', '1d']
-        if age <= datetime.timedelta(days=60):
-            return ['15m', '1h', '1d']
-        if age <= datetime.timedelta(days=730):
-            return ['1h', '1d']
-        return ['1d']
-
-    def _fetch_symbol_at(self, symbol: str, when: datetime.datetime) -> Decimal:
-        last_error = None
-        for interval in self._intervals_for(when):
-            try:
-                return self._fetch_symbol_interval(symbol, when, interval)
-            except PriceFetchError as exc:
-                last_error = exc
-        raise last_error or PriceFetchError(
-            f'No price available for {symbol} at {when.isoformat()}'
-        )
-
-    def _fetch_symbol_interval(
-        self,
-        symbol: str,
-        when: datetime.datetime,
-        interval: str,
-    ) -> Decimal:
-        lookback = INTERVAL_LOOKBACK[interval]
-        start = when - lookback
-        end = when + datetime.timedelta(minutes=1)
-        try:
-            history = yf.Ticker(symbol).history(
-                start=start,
-                end=end,
-                interval=interval,
-                auto_adjust=True,
-            )
-        except Exception as exc:
-            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
-
+    def _fetch_symbol_close(self, symbol: str, date: datetime.date) -> Decimal:
+        start = date - datetime.timedelta(days=HISTORY_LOOKBACK_DAYS)
+        end = date + datetime.timedelta(days=1)
+        history = yf.Ticker(symbol).history(start=start, end=end, auto_adjust=True)
         if history.empty or 'Close' not in history:
-            raise PriceFetchError(f'No {interval} bars for {symbol} at {when.isoformat()}')
+            raise PriceFetchError(f'No historical price available for {symbol} on {date}')
 
-        target_utc = _to_utc(when)
         close = None
         for timestamp, row in history.iterrows():
-            bar_time = _bar_utc(timestamp)
-            value = row['Close']
-            if value is None or (isinstance(value, float) and math.isnan(value)):
-                continue
-            if bar_time <= target_utc:
-                close = value
+            if timestamp.date() <= date:
+                close = row['Close']
 
         if close is None:
-            raise PriceFetchError(
-                f'No {interval} close on or before {when.isoformat()} for {symbol}'
-            )
+            raise PriceFetchError(f'No market close on or before {date} for {symbol}')
         return _to_decimal(close)
 
 
@@ -182,15 +112,15 @@ class PriceService:
     def __init__(self, fetcher: YFinanceFetcher | None = None):
         self.fetcher = fetcher or YFinanceFetcher()
 
-    def get_historical_price(self, asset_code: str, when: datetime.datetime) -> Decimal:
+    def get_historical_price(self, asset_code: str, date: datetime.date) -> Decimal:
         asset = _get_asset(asset_code)
-        priced_at = _cache_timestamp(when)
-        cached = HistoricalPrice.objects.filter(asset=asset, priced_at=priced_at).first()
+        date = _as_date(date)
+        cached = HistoricalPrice.objects.filter(asset=asset, date=date).first()
         if cached is not None:
             return cached.price_try
 
-        price = self.fetcher.fetch_price(asset_code, priced_at)
-        HistoricalPrice.objects.create(asset=asset, priced_at=priced_at, price_try=price)
+        price = self.fetcher.fetch_price(asset_code, date)
+        HistoricalPrice.objects.create(asset=asset, date=date, price_try=price)
         return price
 
     def get_current_price(self, asset_code: str) -> Decimal:
@@ -207,10 +137,10 @@ class TransactionService:
         asset_code: str,
         amount: Decimal,
         total_paid_try: Decimal,
-        transaction_date: datetime.datetime,
+        transaction_date: datetime.date,
     ) -> Transaction:
         asset = _get_asset(asset_code)
-        transaction_date = _ensure_aware(transaction_date)
+        transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
         market_price = self.price_service.get_historical_price(asset_code, transaction_date)

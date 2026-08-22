@@ -16,14 +16,14 @@ class Asset(models.Model):
 
 class HistoricalPrice(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    priced_at = models.DateTimeField()
+    date = models.DateField()
     price_try = models.DecimalField(max_digits=12, decimal_places=4)
 
     class Meta:
-        unique_together = ['asset', 'priced_at']
+        unique_together = ['asset', 'date']
 
     def __str__(self):
-        return f'{self.asset_id} {self.priced_at}'
+        return f'{self.asset_id} {self.date}'
 
 
 class Transaction(models.Model):
@@ -31,7 +31,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=4)
     total_paid_try = models.DecimalField(max_digits=12, decimal_places=2)
     spread_fee_try = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    transaction_date = models.DateTimeField()
+    transaction_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
