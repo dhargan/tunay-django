@@ -4,6 +4,7 @@ import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
 import yfinance as yf
+from django.utils import timezone
 
 from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction
 
@@ -53,6 +54,7 @@ def _quote_from_prices(price: Decimal, previous_close: Decimal) -> dict[str, Dec
         trend = 'neutral'
     return {
         'price': price,
+        'previous_close': previous_close,
         'change_pct': change_pct,
         'trend': trend,
     }
@@ -266,54 +268,43 @@ class PortfolioAnalyticsService:
         }
 
     def calculate_cumulative_pnl(self) -> dict[str, Decimal]:
-        transactions = Transaction.objects.all()
+        transactions = list(Transaction.objects.all())
+        today = timezone.localdate()
         total_invested = Decimal('0')
         current_total_value = Decimal('0')
-        live_prices: dict[str, Decimal] = {}
+        today_change_try = Decimal('0')
+        start_of_day_value = Decimal('0')
+        quotes: dict[str, dict[str, Decimal | str]] = {}
 
         for transaction in transactions:
             total_invested += transaction.total_paid_try
             code = transaction.asset
-            if code not in live_prices:
-                live_prices[code] = self.price_service.get_current_price(code)
-            current_total_value += transaction.amount * live_prices[code]
+            if code not in quotes:
+                quotes[code] = self.price_service.get_live_quote(code)
+            price = quotes[code]['price']
+            previous_close = quotes[code]['previous_close']
+            current_value = transaction.amount * price
+            current_total_value += current_value
+
+            if transaction.transaction_date < today:
+                start_of_day_value += transaction.amount * previous_close
+                today_change_try += transaction.amount * (price - previous_close)
+            elif transaction.transaction_date == today:
+                today_change_try += current_value - transaction.total_paid_try
 
         total_invested = _to_decimal(total_invested, MONEY_QUANTUM)
         current_total_value = _to_decimal(current_total_value, MONEY_QUANTUM)
         total_pnl_try = _to_decimal(current_total_value - total_invested, MONEY_QUANTUM)
-        yesterday_value = self._yesterday_portfolio_value(transactions, live_prices)
-        today_change_try = _to_decimal(current_total_value - yesterday_value, MONEY_QUANTUM)
+        today_change_try = _to_decimal(today_change_try, MONEY_QUANTUM)
+        baseline = start_of_day_value if start_of_day_value else total_invested
         return {
             'total_invested': total_invested,
             'current_total_value': current_total_value,
             'total_pnl_try': total_pnl_try,
             'total_pnl_percentage': self._pnl_percentage(total_pnl_try, total_invested),
             'today_change_try': today_change_try,
-            'today_change_percentage': self._pnl_percentage(today_change_try, yesterday_value),
+            'today_change_percentage': self._pnl_percentage(today_change_try, baseline),
         }
-
-    def _yesterday_portfolio_value(
-        self,
-        transactions,
-        live_prices: dict[str, Decimal],
-    ) -> Decimal:
-        if not transactions:
-            return Decimal('0')
-        yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        yesterday_prices: dict[str, Decimal] = {}
-        total = Decimal('0')
-        for transaction in transactions:
-            code = transaction.asset
-            if code not in yesterday_prices:
-                try:
-                    yesterday_prices[code] = self.price_service.get_historical_price(
-                        code,
-                        yesterday,
-                    )
-                except PriceFetchError:
-                    yesterday_prices[code] = live_prices.get(code, Decimal('0'))
-            total += transaction.amount * yesterday_prices[code]
-        return total
 
     @staticmethod
     def _pnl_percentage(pnl_try: Decimal, invested: Decimal) -> Decimal:
