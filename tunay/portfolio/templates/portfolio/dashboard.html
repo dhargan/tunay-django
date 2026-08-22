@@ -92,8 +92,13 @@
         </section>
 
         <section class="panel p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h2 class="panel-title mb-0">Aylık kâr/zarar</h2>
+                <div class="btn-group btn-group-sm chart-filter" role="group" aria-label="Grafik filtresi">
+                    <button type="button" class="btn btn-accent js-chart-filter active" data-filter="all">All</button>
+                    <button type="button" class="btn btn-outline-secondary js-chart-filter" data-filter="usd">USD Only</button>
+                    <button type="button" class="btn btn-outline-secondary js-chart-filter" data-filter="gold">Gold Only</button>
+                </div>
             </div>
             <div class="chart-wrap">
                 <canvas id="monthlyPnlChart"></canvas>

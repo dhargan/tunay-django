@@ -233,3 +233,7 @@ body.portfolio-app {
     position: relative;
     height: 320px;
 }
+
+.chart-filter .btn {
+    font-weight: 600;
+}

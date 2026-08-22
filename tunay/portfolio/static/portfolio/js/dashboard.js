@@ -6,6 +6,7 @@
     };
 
     let monthlyPnlChart = null;
+    let chartFilter = 'all';
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -113,6 +114,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
+                        onClick: Chart.defaults.plugins.legend.onClick,
                         labels: { color: '#333', font: { family: 'Quicksand' } },
                     },
                 },
@@ -133,6 +135,30 @@
                 },
             },
         });
+        applyChartFilter(chartFilter);
+    }
+
+    function applyChartFilter(filter) {
+        if (!monthlyPnlChart) {
+            return;
+        }
+        const showUsd = filter === 'all' || filter === 'usd';
+        const showGold = filter === 'all' || filter === 'gold';
+        monthlyPnlChart.setDatasetVisibility(0, showUsd);
+        monthlyPnlChart.setDatasetVisibility(1, showGold);
+        monthlyPnlChart.update();
+    }
+
+    function setActiveChartFilter(filter) {
+        chartFilter = filter;
+        $('.js-chart-filter').each(function () {
+            const isActive = $(this).data('filter') === filter;
+            $(this)
+                .toggleClass('active', isActive)
+                .toggleClass('btn-accent', isActive)
+                .toggleClass('btn-outline-secondary', !isActive);
+        });
+        applyChartFilter(filter);
     }
 
     function pnlClass(value) {
@@ -370,8 +396,8 @@
         loadAssets();
         reloadAll();
 
-        $(document).on('click', '.js-edit-tx', function () {
-            editTransaction($(this).data('id'));
+        $(document).on('click', '.js-chart-filter', function () {
+            setActiveChartFilter($(this).data('filter'));
         });
 
         $(document).on('click', '.js-delete-tx', function () {
