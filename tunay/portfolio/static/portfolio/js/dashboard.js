@@ -7,6 +7,7 @@
 
     let monthlyPnlChart = null;
     let chartFilter = 'all';
+    let cachedTransactions = [];
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -319,6 +320,7 @@
     function loadTransactions() {
         return $.getJSON(API.transactions).done((data) => {
             const transactions = Array.isArray(data) ? data : data.results || [];
+            cachedTransactions = transactions;
             renderAssetSummary(transactions);
             renderTransactionHistory(transactions);
         });
@@ -349,20 +351,33 @@
         return `${API.transactions}${id}/`;
     }
 
+    function fillTransactionForm(tx) {
+        $('#transactionId').val(tx.id);
+        $('#transactionModalTitle').text('İşlemi düzenle');
+        $('#asset_code').val(tx.asset && tx.asset.code);
+        $('#amount').val(tx.amount);
+        $('#total_paid_try').val(tx.total_paid_try);
+        $('#transaction_date').val(tx.transaction_date);
+        bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('addTransactionModal')
+        ).show();
+    }
+
     function editTransaction(id) {
-        return $.when(loadAssets()).then(() => {
-            return $.getJSON(transactionUrl(id)).done((tx) => {
-                $('#transactionId').val(tx.id);
-                $('#transactionModalTitle').text('İşlemi düzenle');
-                $('#asset_code').val(tx.asset.code);
-                $('#amount').val(tx.amount);
-                $('#total_paid_try').val(tx.total_paid_try);
-                $('#transaction_date').val(tx.transaction_date);
-                bootstrap.Modal.getOrCreateInstance(
-                    document.getElementById('addTransactionModal')
-                ).show();
+        const cached = cachedTransactions.find(
+            (tx) => Number(tx.id) === Number(id)
+        );
+        return $.when(loadAssets())
+            .then(() => {
+                if (cached) {
+                    fillTransactionForm(cached);
+                    return;
+                }
+                return $.getJSON(transactionUrl(id)).done(fillTransactionForm);
+            })
+            .fail((xhr) => {
+                showToast(parseApiError(xhr), true);
             });
-        });
     }
 
     function deleteTransaction(id) {
@@ -398,6 +413,10 @@
 
         $(document).on('click', '.js-chart-filter', function () {
             setActiveChartFilter($(this).data('filter'));
+        });
+
+        $(document).on('click', '.js-edit-tx', function () {
+            editTransaction($(this).data('id'));
         });
 
         $(document).on('click', '.js-delete-tx', function () {
