@@ -1,10 +1,10 @@
 from django.urls import include, path
 
-from tunay.portfolio import views
+from tunay.portfolio.views import DashboardView
 
 app_name = 'portfolio'
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', DashboardView.as_view(), name='index'),
     path('api/', include('tunay.portfolio.api.urls')),
 ]

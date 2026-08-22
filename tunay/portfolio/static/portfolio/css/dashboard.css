@@ -1,0 +1,180 @@
+:root {
+    --purple: #8b6b8f;
+    --purple-dark: #6f5573;
+    --gold: #ffd700;
+    --bg: #f5f5f5;
+    --bg-soft: #f8f9fa;
+    --card: #ffffff;
+    --text: #333333;
+    --muted: #666666;
+    --border: #ece6ee;
+    --danger: #c45c6a;
+    --positive: #5a8f6d;
+    --shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body.portfolio-app {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Quicksand", "Segoe UI", sans-serif;
+}
+
+.brand-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: var(--purple);
+    border: 3px solid #fff;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.topbar {
+    background-color: var(--purple);
+    color: #fff;
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+}
+
+.topbar .brand-title {
+    font-family: "Josefin Sans", sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+}
+
+.topbar .brand-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.highlight {
+    color: var(--gold);
+}
+
+.kpi-card,
+.panel {
+    background: var(--card);
+    border: none;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+}
+
+.kpi-card {
+    padding: 1.15rem 1.25rem;
+    height: 100%;
+}
+
+.kpi-label {
+    color: var(--purple);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.kpi-label i {
+    color: var(--purple);
+}
+
+.kpi-value {
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin-top: 0.35rem;
+    color: var(--text);
+    font-family: "Josefin Sans", sans-serif;
+}
+
+.pnl-positive {
+    color: var(--positive);
+}
+
+.pnl-negative {
+    color: var(--danger);
+}
+
+.btn-accent {
+    background: var(--purple);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-accent:hover,
+.btn-accent:focus {
+    background: var(--purple-dark);
+    color: var(--gold);
+}
+
+.panel-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--purple);
+    font-family: "Josefin Sans", sans-serif;
+}
+
+.table-dark-fintech {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: var(--bg-soft);
+    margin-bottom: 0;
+    font-size: 0.92rem;
+}
+
+.table-dark-fintech thead th {
+    color: var(--purple);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom-width: 1px;
+    white-space: nowrap;
+}
+
+.empty-row td {
+    color: var(--muted);
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.modal-content.fintech-modal {
+    background: var(--card);
+    color: var(--text);
+    border: none;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+}
+
+.form-control,
+.form-select {
+    background: #fff;
+    border-color: #ddd4e0;
+    color: var(--text);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: #fff;
+    color: var(--text);
+    border-color: var(--purple);
+    box-shadow: 0 0 0 0.2rem rgba(139, 107, 143, 0.2);
+}
+
+.form-label {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.toast-container .toast {
+    background: var(--card);
+    color: var(--text);
+    border: none;
+    box-shadow: var(--shadow);
+}
