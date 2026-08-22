@@ -206,7 +206,7 @@
             $select.append('<option value="">Varlık seçin</option>');
             assets.forEach((asset) => {
                 $select.append(
-                    `<option value="${asset.code}">${asset.name} (${asset.code})</option>`
+                    `<option value="${asset.code}">${asset.name}</option>`
                 );
             });
         });

@@ -5,12 +5,11 @@ from decimal import Decimal, ROUND_HALF_UP
 
 import yfinance as yf
 
-from tunay.portfolio.models import Asset, HistoricalPrice, Transaction
+from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction
 
 USDTRY_SYMBOL = 'USDTRY=X'
 GOLD_FUTURES_SYMBOL = 'GC=F'
 TROY_OUNCE_GRAMS = Decimal('31.1034768')
-SUPPORTED_ASSETS = frozenset({'USD', 'GA'})
 HISTORY_LOOKBACK_DAYS = 21
 PRICE_QUANTUM = Decimal('0.0001')
 MONEY_QUANTUM = Decimal('0.01')
@@ -21,7 +20,7 @@ class PriceFetchError(Exception):
 
 
 class UnknownAssetError(ValueError):
-    """Raised when an asset code is not supported or missing in the database."""
+    """Raised when an asset code is not a known AssetType."""
 
 
 def _to_decimal(value: object, quantum: Decimal = PRICE_QUANTUM) -> Decimal:
@@ -33,17 +32,9 @@ def _to_decimal(value: object, quantum: Decimal = PRICE_QUANTUM) -> Decimal:
 
 
 def _require_asset_code(asset_code: str) -> str:
-    if asset_code not in SUPPORTED_ASSETS:
+    if asset_code not in AssetType.values:
         raise UnknownAssetError(f'Unsupported asset code: {asset_code}')
     return asset_code
-
-
-def _get_asset(asset_code: str) -> Asset:
-    _require_asset_code(asset_code)
-    try:
-        return Asset.objects.get(code=asset_code)
-    except Asset.DoesNotExist as exc:
-        raise UnknownAssetError(f'Asset {asset_code} is not registered') from exc
 
 
 def _as_date(value: datetime.date | datetime.datetime) -> datetime.date:
@@ -64,14 +55,14 @@ class YFinanceFetcher:
         return self._historical_asset_price(asset_code, _as_date(date))
 
     def _current_asset_price(self, asset_code: str) -> Decimal:
-        if asset_code == 'USD':
+        if asset_code == AssetType.USD:
             return self._fetch_symbol_current(USDTRY_SYMBOL)
         gold_usd = self._fetch_symbol_current(GOLD_FUTURES_SYMBOL)
         usdtry = self._fetch_symbol_current(USDTRY_SYMBOL)
         return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
 
     def _historical_asset_price(self, asset_code: str, date: datetime.date) -> Decimal:
-        if asset_code == 'USD':
+        if asset_code == AssetType.USD:
             return self._fetch_symbol_close(USDTRY_SYMBOL, date)
         gold_usd = self._fetch_symbol_close(GOLD_FUTURES_SYMBOL, date)
         usdtry = self._fetch_symbol_close(USDTRY_SYMBOL, date)
@@ -113,19 +104,18 @@ class PriceService:
         self.fetcher = fetcher or YFinanceFetcher()
 
     def get_historical_price(self, asset_code: str, date: datetime.date) -> Decimal:
-        asset = _get_asset(asset_code)
+        asset_code = _require_asset_code(asset_code)
         date = _as_date(date)
-        cached = HistoricalPrice.objects.filter(asset=asset, date=date).first()
+        cached = HistoricalPrice.objects.filter(asset=asset_code, date=date).first()
         if cached is not None:
             return cached.price_try
 
         price = self.fetcher.fetch_price(asset_code, date)
-        HistoricalPrice.objects.create(asset=asset, date=date, price_try=price)
+        HistoricalPrice.objects.create(asset=asset_code, date=date, price_try=price)
         return price
 
     def get_current_price(self, asset_code: str) -> Decimal:
-        _require_asset_code(asset_code)
-        return self.fetcher.fetch_price(asset_code)
+        return self.fetcher.fetch_price(_require_asset_code(asset_code))
 
 
 class TransactionService:
@@ -139,7 +129,7 @@ class TransactionService:
         total_paid_try: Decimal,
         transaction_date: datetime.date,
     ) -> Transaction:
-        asset = _get_asset(asset_code)
+        asset_code = _require_asset_code(asset_code)
         transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
@@ -150,7 +140,7 @@ class TransactionService:
             MONEY_QUANTUM,
         )
         return Transaction.objects.create(
-            asset=asset,
+            asset=asset_code,
             amount=amount,
             total_paid_try=total_paid_try,
             spread_fee_try=spread_fee_try,
@@ -163,7 +153,7 @@ class PortfolioAnalyticsService:
         self.price_service = price_service or PriceService()
 
     def calculate_transaction_pnl(self, transaction: Transaction) -> dict[str, Decimal | None]:
-        current_price = self.price_service.get_current_price(transaction.asset.code)
+        current_price = self.price_service.get_current_price(transaction.asset)
         current_value = _to_decimal(transaction.amount * current_price, MONEY_QUANTUM)
         pnl_try = _to_decimal(current_value - transaction.total_paid_try, MONEY_QUANTUM)
         pnl_percentage = self._pnl_percentage(pnl_try, transaction.total_paid_try)
@@ -175,14 +165,14 @@ class PortfolioAnalyticsService:
         }
 
     def calculate_cumulative_pnl(self) -> dict[str, Decimal]:
-        transactions = Transaction.objects.select_related('asset').all()
+        transactions = Transaction.objects.all()
         total_invested = Decimal('0')
         current_total_value = Decimal('0')
         live_prices: dict[str, Decimal] = {}
 
         for transaction in transactions:
             total_invested += transaction.total_paid_try
-            code = transaction.asset.code
+            code = transaction.asset
             if code not in live_prices:
                 live_prices[code] = self.price_service.get_current_price(code)
             current_total_value += transaction.amount * live_prices[code]
@@ -212,7 +202,7 @@ class PortfolioAnalyticsService:
         yesterday_prices: dict[str, Decimal] = {}
         total = Decimal('0')
         for transaction in transactions:
-            code = transaction.asset.code
+            code = transaction.asset
             if code not in yesterday_prices:
                 try:
                     yesterday_prices[code] = self.price_service.get_historical_price(

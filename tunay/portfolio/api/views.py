@@ -1,15 +1,13 @@
 from rest_framework import status
-from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from tunay.portfolio.api.serializers import (
-    AssetSerializer,
     TransactionCreateSerializer,
     TransactionDetailSerializer,
 )
-from tunay.portfolio.models import Asset, Transaction
+from tunay.portfolio.models import AssetType, Transaction
 from tunay.portfolio.services import (
     PriceFetchError,
     PortfolioAnalyticsService,
@@ -24,16 +22,16 @@ class DashboardAPIView(APIView):
         return Response(metrics)
 
 
-class AssetListView(ListAPIView):
-    queryset = Asset.objects.all().order_by('code')
-    serializer_class = AssetSerializer
+class AssetListView(APIView):
+    def get(self, request):
+        return Response([
+            {'code': code, 'name': label}
+            for code, label in AssetType.choices
+        ])
 
 
 class TransactionViewSet(ModelViewSet):
-    queryset = Transaction.objects.select_related('asset').order_by(
-        '-transaction_date',
-        '-id',
-    )
+    queryset = Transaction.objects.all().order_by('-transaction_date', '-id')
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_serializer_class(self):
@@ -53,7 +51,6 @@ class TransactionViewSet(ModelViewSet):
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
-        transaction = Transaction.objects.select_related('asset').get(pk=transaction.pk)
         return Response(
             TransactionDetailSerializer(transaction).data,
             status=status.HTTP_201_CREATED,

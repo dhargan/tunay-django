@@ -1,32 +1,18 @@
 from rest_framework import serializers
 
-from tunay.portfolio.models import Asset, Transaction
+from tunay.portfolio.models import AssetType, Transaction
 from tunay.portfolio.services import PortfolioAnalyticsService
 
 
-class AssetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Asset
-        fields = ['id', 'code', 'name']
-
-
 class TransactionCreateSerializer(serializers.Serializer):
-    asset_code = serializers.CharField(max_length=10)
+    asset_code = serializers.ChoiceField(choices=AssetType.choices)
     amount = serializers.DecimalField(max_digits=12, decimal_places=4)
     total_paid_try = serializers.DecimalField(max_digits=12, decimal_places=2)
     transaction_date = serializers.DateField()
 
-    def validate_asset_code(self, value):
-        valid_codes = {code for code, _ in Asset.ASSET_CHOICES}
-        if value not in valid_codes:
-            raise serializers.ValidationError(f'Unsupported asset code: {value}')
-        if not Asset.objects.filter(code=value).exists():
-            raise serializers.ValidationError(f'Asset {value} is not registered')
-        return value
-
 
 class TransactionDetailSerializer(serializers.ModelSerializer):
-    asset = AssetSerializer(read_only=True)
+    asset = serializers.SerializerMethodField()
     effective_unit_cost = serializers.DecimalField(
         max_digits=12,
         decimal_places=4,
@@ -56,6 +42,12 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         self._analytics = PortfolioAnalyticsService()
         self._pnl_cache = {}
+
+    def get_asset(self, obj: Transaction) -> dict[str, str]:
+        return {
+            'code': obj.asset,
+            'name': AssetType(obj.asset).label,
+        }
 
     def _pnl(self, transaction: Transaction) -> dict:
         if transaction.pk not in self._pnl_cache:

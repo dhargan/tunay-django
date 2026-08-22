@@ -1,21 +1,13 @@
 from django.db import models
 
 
-class Asset(models.Model):
-    ASSET_CHOICES = [
-        ('USD', 'US Dollar'),
-        ('GA', 'Gram Gold'),
-    ]
-
-    code = models.CharField(max_length=10, choices=ASSET_CHOICES, unique=True)
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
+class AssetType(models.TextChoices):
+    USD = 'USD', 'US Dollar'
+    GA = 'GA', 'Gram Gold'
 
 
 class HistoricalPrice(models.Model):
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    asset = models.CharField(max_length=10, choices=AssetType.choices)
     date = models.DateField()
     price_try = models.DecimalField(max_digits=12, decimal_places=4)
 
@@ -23,11 +15,11 @@ class HistoricalPrice(models.Model):
         unique_together = ['asset', 'date']
 
     def __str__(self):
-        return f'{self.asset_id} {self.date}'
+        return f'{self.asset} {self.date}'
 
 
 class Transaction(models.Model):
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    asset = models.CharField(max_length=10, choices=AssetType.choices)
     amount = models.DecimalField(max_digits=12, decimal_places=4)
     total_paid_try = models.DecimalField(max_digits=12, decimal_places=2)
     spread_fee_try = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -39,4 +31,4 @@ class Transaction(models.Model):
         return self.total_paid_try / self.amount
 
     def __str__(self):
-        return f'{self.asset_id} {self.transaction_date}'
+        return f'{self.asset} {self.transaction_date}'
