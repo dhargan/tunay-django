@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tunay.home',
     'tunay.pixel_tarot',
+    'tunay.portfolio',
     'rest_framework',
 ]
 
