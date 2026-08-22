@@ -171,7 +171,7 @@
         const $body = $('#transactionHistoryBody').empty();
         if (!transactions.length) {
             $body.append(
-                '<tr class="empty-row"><td colspan="8">Henüz işlem yok.</td></tr>'
+                '<tr class="empty-row"><td colspan="9">Henüz işlem yok.</td></tr>'
             );
             return;
         }
@@ -181,11 +181,19 @@
                     <td>${tx.transaction_date}</td>
                     <td>${tx.asset.name}</td>
                     <td>${formatQty(tx.amount)}</td>
-                    <td>${formatTRY(tx.effective_unit_cost, 4)}</td>
+                    <td>${formatTRY(tx.effective_unit_cost, 2)}</td>
                     <td>${formatTRY(tx.total_paid_try, 2)}</td>
                     <td>${formatTRY(tx.spread_fee_try || 0, 2)}</td>
                     <td>${formatTRY(tx.current_value, 2)}</td>
                     <td class="${pnlClass(tx.pnl_try)}">${signedTRY(tx.pnl_try)}</td>
+                    <td class="text-nowrap">
+                        <button type="button" class="action-btn js-edit-tx" data-id="${tx.id}" title="Edit">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button type="button" class="action-btn danger js-delete-tx" data-id="${tx.id}" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
             `);
         });
@@ -212,6 +220,51 @@
         });
     }
 
+    function resetTransactionForm() {
+        $('#transactionId').val('');
+        $('#transactionModalTitle').text('New Transaction');
+        $('#formError').addClass('d-none').text('');
+        $('#addTransactionForm')[0].reset();
+        $('#transaction_date').val(new Date().toISOString().slice(0, 10));
+    }
+
+    function transactionUrl(id) {
+        return `${API.transactions}${id}/`;
+    }
+
+    function editTransaction(id) {
+        return $.when(loadAssets()).then(() => {
+            return $.getJSON(transactionUrl(id)).done((tx) => {
+                $('#transactionId').val(tx.id);
+                $('#transactionModalTitle').text('Edit Transaction');
+                $('#asset_code').val(tx.asset.code);
+                $('#amount').val(tx.amount);
+                $('#total_paid_try').val(tx.total_paid_try);
+                $('#transaction_date').val(tx.transaction_date);
+                bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById('addTransactionModal')
+                ).show();
+            });
+        });
+    }
+
+    function deleteTransaction(id) {
+        if (!confirm('Are you sure you want to delete this transaction?')) {
+            return;
+        }
+        return $.ajax({
+            url: transactionUrl(id),
+            method: 'DELETE',
+        })
+            .done(() => {
+                showToast('İşlem silindi.', false);
+                reloadAll();
+            })
+            .fail((xhr) => {
+                showToast(parseApiError(xhr), true);
+            });
+    }
+
     function reloadAll() {
         return $.when(loadDashboardData(), loadTransactions());
     }
@@ -226,9 +279,22 @@
         loadAssets();
         reloadAll();
 
+        $(document).on('click', '.js-edit-tx', function () {
+            editTransaction($(this).data('id'));
+        });
+
+        $(document).on('click', '.js-delete-tx', function () {
+            deleteTransaction($(this).data('id'));
+        });
+
+        $('[data-bs-target="#addTransactionModal"]').on('click', function () {
+            resetTransactionForm();
+        });
+
         $('#addTransactionForm').on('submit', function (event) {
             event.preventDefault();
             const $error = $('#formError').addClass('d-none').text('');
+            const transactionId = $('#transactionId').val();
             const payload = {
                 asset_code: $('#asset_code').val(),
                 amount: $('#amount').val(),
@@ -237,19 +303,20 @@
             };
 
             $.ajax({
-                url: API.transactions,
-                method: 'POST',
+                url: transactionId ? transactionUrl(transactionId) : API.transactions,
+                method: transactionId ? 'PUT' : 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(payload),
             })
                 .done(() => {
-                    showToast('İşlem kaydedildi.', false);
-                    const modal = bootstrap.Modal.getInstance(
-                        document.getElementById('addTransactionModal')
+                    showToast(
+                        transactionId ? 'İşlem güncellendi.' : 'İşlem kaydedildi.',
+                        false
                     );
-                    modal.hide();
-                    this.reset();
-                    $('#transaction_date').val(new Date().toISOString().slice(0, 10));
+                    bootstrap.Modal.getInstance(
+                        document.getElementById('addTransactionModal')
+                    ).hide();
+                    resetTransactionForm();
                     reloadAll();
                 })
                 .fail((xhr) => {
@@ -258,7 +325,7 @@
         });
 
         $('#addTransactionModal').on('hidden.bs.modal', () => {
-            $('#formError').addClass('d-none').text('');
+            resetTransactionForm();
         });
     });
 })(jQuery);

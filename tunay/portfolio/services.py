@@ -122,6 +122,20 @@ class TransactionService:
     def __init__(self, price_service: PriceService | None = None):
         self.price_service = price_service or PriceService()
 
+    def _spread_fee(
+        self,
+        asset_code: str,
+        amount: Decimal,
+        total_paid_try: Decimal,
+        transaction_date: datetime.date,
+    ) -> Decimal:
+        market_price = self.price_service.get_historical_price(asset_code, transaction_date)
+        market_value = amount * market_price
+        return _to_decimal(
+            max(Decimal('0'), total_paid_try - market_value),
+            MONEY_QUANTUM,
+        )
+
     def create_transaction(
         self,
         asset_code: str,
@@ -133,19 +147,43 @@ class TransactionService:
         transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
-        market_price = self.price_service.get_historical_price(asset_code, transaction_date)
-        market_value = amount * market_price
-        spread_fee_try = _to_decimal(
-            max(Decimal('0'), total_paid_try - market_value),
-            MONEY_QUANTUM,
-        )
         return Transaction.objects.create(
             asset=asset_code,
             amount=amount,
             total_paid_try=total_paid_try,
-            spread_fee_try=spread_fee_try,
+            spread_fee_try=self._spread_fee(
+                asset_code,
+                amount,
+                total_paid_try,
+                transaction_date,
+            ),
             transaction_date=transaction_date,
         )
+
+    def update_transaction(
+        self,
+        transaction: Transaction,
+        asset_code: str,
+        amount: Decimal,
+        total_paid_try: Decimal,
+        transaction_date: datetime.date,
+    ) -> Transaction:
+        asset_code = _require_asset_code(asset_code)
+        transaction_date = _as_date(transaction_date)
+        amount = _to_decimal(amount)
+        total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
+        transaction.asset = asset_code
+        transaction.amount = amount
+        transaction.total_paid_try = total_paid_try
+        transaction.transaction_date = transaction_date
+        transaction.spread_fee_try = self._spread_fee(
+            asset_code,
+            amount,
+            total_paid_try,
+            transaction_date,
+        )
+        transaction.save()
+        return transaction
 
 
 class PortfolioAnalyticsService:

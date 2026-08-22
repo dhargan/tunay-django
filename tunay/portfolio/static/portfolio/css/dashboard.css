@@ -172,6 +172,21 @@ body.portfolio-app {
     font-size: 0.82rem;
 }
 
+.action-btn {
+    border: none;
+    background: transparent;
+    color: var(--purple);
+    padding: 0.2rem 0.35rem;
+}
+
+.action-btn:hover {
+    color: var(--gold);
+}
+
+.action-btn.danger:hover {
+    color: var(--danger);
+}
+
 .toast-container .toast {
     background: var(--card);
     color: var(--text);
