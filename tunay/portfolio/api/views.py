@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,20 +17,43 @@ from tunay.portfolio.services import (
     UnknownAssetError,
 )
 
+logger = logging.getLogger(__name__)
+
+EMPTY_KPI = {
+    'total_invested': 0,
+    'current_total_value': 0,
+    'total_pnl_try': 0,
+    'total_pnl_percentage': 0,
+    'today_change_try': 0,
+    'today_change_percentage': 0,
+}
+
 
 class DashboardAPIView(APIView):
     def get(self, request):
         analytics = PortfolioAnalyticsService()
+        metrics = dict(EMPTY_KPI)
+        metrics['live_rates'] = {}
+        metrics['monthly_pnl'] = {'months': [], 'usd_pnl': [], 'ga_pnl': []}
+
         try:
-            metrics = analytics.calculate_cumulative_pnl()
-            price_service = analytics.price_service
+            metrics.update(analytics.calculate_cumulative_pnl())
+        except Exception:
+            logger.exception('Dashboard KPI calculation failed')
+
+        try:
             metrics['live_rates'] = {
-                'USD': price_service.get_live_quote('USD'),
-                'GA': price_service.get_live_quote('GA'),
+                'USD': analytics.price_service.get_live_quote('USD'),
+                'GA': analytics.price_service.get_live_quote('GA'),
             }
-        except PriceFetchError as exc:
-            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-        metrics['monthly_pnl'] = analytics.get_monthly_pnl_breakdown()
+        except Exception:
+            logger.exception('Dashboard live rates failed')
+
+        try:
+            metrics['monthly_pnl'] = analytics.get_monthly_pnl_breakdown()
+        except Exception:
+            logger.exception('Dashboard monthly PnL failed')
+
         return Response(metrics)
 
 
