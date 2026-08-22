@@ -13,12 +13,24 @@
 </head>
 <body class="portfolio-app">
     <header class="topbar py-3 mb-4">
-        <div class="container d-flex align-items-center justify-content-between">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="brand-mark"><i class="fa-solid fa-chart-line"></i></div>
                 <div>
                     <div class="brand-title">Portföy</div>
                     <div class="small brand-subtitle">Canlı varlık takibi</div>
+                </div>
+            </div>
+            <div class="live-rates d-flex flex-wrap gap-2 justify-content-end">
+                <div class="live-rate-card">
+                    <div class="live-rate-label"><i class="fa-solid fa-dollar-sign me-1"></i>USD / TRY</div>
+                    <div class="live-rate-value" id="liveRateUSD">—</div>
+                    <div class="live-rate-change trend-neutral" id="liveChangeUSD">—</div>
+                </div>
+                <div class="live-rate-card">
+                    <div class="live-rate-label"><i class="fa-solid fa-coins me-1"></i>Gram altın</div>
+                    <div class="live-rate-value" id="liveRateGA">—</div>
+                    <div class="live-rate-change trend-neutral" id="liveChangeGA">—</div>
                 </div>
             </div>
         </div>
@@ -34,7 +46,7 @@
             </div>
             <div class="col-md-3">
                 <div class="kpi-card">
-                    <div class="kpi-label"><i class="fa-solid fa-arrow-trend-up me-2"></i>Kümülatif PnL</div>
+                    <div class="kpi-label"><i class="fa-solid fa-arrow-trend-up me-2"></i>Kümülatif kâr/zarar</div>
                     <div class="kpi-value" id="kpiPnlTry">—</div>
                     <div class="small" id="kpiPnlPct">—</div>
                 </div>
@@ -50,7 +62,7 @@
                 <div class="kpi-card d-flex flex-column justify-content-between">
                     <div class="kpi-label">İşlem</div>
                     <button type="button" class="btn btn-accent w-100 mt-3" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-                        <i class="fa-solid fa-plus me-2"></i>+ New Transaction
+                        <i class="fa-solid fa-plus me-2"></i>+ Yeni işlem
                     </button>
                 </div>
             </div>
@@ -68,7 +80,7 @@
                             <th>Toplam miktar</th>
                             <th>Ort. maliyet</th>
                             <th>Güncel değer</th>
-                            <th>Kümülatif PnL</th>
+                            <th>Kümülatif kâr/zarar</th>
                         </tr>
                     </thead>
                     <tbody id="assetSummaryBody">
@@ -91,9 +103,9 @@
                             <th>Miktar</th>
                             <th>Birim fiyat</th>
                             <th>Ödenen</th>
-                            <th>Spread</th>
+                            <th>Makas</th>
                             <th>Güncel değer</th>
-                            <th>Spesifik PnL</th>
+                            <th>İşlem kâr/zararı</th>
                             <th>İşlemler</th>
                         </tr>
                     </thead>
@@ -110,7 +122,7 @@
             <div class="modal-content fintech-modal">
                 <form id="addTransactionForm">
                     <div class="modal-header border-secondary">
-                        <h5 class="modal-title" id="transactionModalTitle">New Transaction</h5>
+                        <h5 class="modal-title" id="transactionModalTitle">Yeni işlem</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                     </div>
                     <div class="modal-body">

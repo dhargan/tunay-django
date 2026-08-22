@@ -48,6 +48,30 @@
         })}%`;
     }
 
+    function renderLiveRate(code, quote) {
+        const $price = $(`#liveRate${code}`);
+        const $change = $(`#liveChange${code}`);
+        if (!quote || quote.price == null) {
+            $price.text('—');
+            $change.text('—').removeClass('trend-up trend-down trend-neutral').addClass('trend-neutral');
+            return;
+        }
+        $price.text(formatTRY(quote.price, 2));
+        const pct = Number(quote.change_pct);
+        const signedPct = `${pct > 0 ? '+' : ''}${pct.toLocaleString('tr-TR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}%`;
+        $change.removeClass('trend-up trend-down trend-neutral');
+        if (quote.trend === 'up') {
+            $change.addClass('trend-up').text(`▲ ${signedPct}`);
+        } else if (quote.trend === 'down') {
+            $change.addClass('trend-down').text(`▼ ${signedPct}`);
+        } else {
+            $change.addClass('trend-neutral').text(`- ${signedPct}`);
+        }
+    }
+
     function pnlClass(value) {
         const amount = Number(value);
         if (amount > 0) {
@@ -120,6 +144,9 @@
                 .text(formatPct(data.today_change_percentage))
                 .removeClass('pnl-positive pnl-negative text-secondary')
                 .addClass(pnlClass(data.today_change_percentage));
+            const rates = data.live_rates || {};
+            renderLiveRate('USD', rates.USD);
+            renderLiveRate('GA', rates.GA);
         });
     }
 
@@ -159,7 +186,7 @@
                 <tr>
                     <td>${row.name}</td>
                     <td>${formatQty(row.amount)}</td>
-                    <td>${formatTRY(avgCost, 4)}</td>
+                    <td>${formatTRY(avgCost, 2)}</td>
                     <td>${formatTRY(row.currentValue, 2)}</td>
                     <td class="${pnlClass(row.pnl)}">${signedTRY(row.pnl)}</td>
                 </tr>
@@ -187,10 +214,10 @@
                     <td>${formatTRY(tx.current_value, 2)}</td>
                     <td class="${pnlClass(tx.pnl_try)}">${signedTRY(tx.pnl_try)}</td>
                     <td class="text-nowrap">
-                        <button type="button" class="action-btn js-edit-tx" data-id="${tx.id}" title="Edit">
+                        <button type="button" class="action-btn js-edit-tx" data-id="${tx.id}" title="Düzenle">
                             <i class="fa-solid fa-pencil"></i>
                         </button>
-                        <button type="button" class="action-btn danger js-delete-tx" data-id="${tx.id}" title="Delete">
+                        <button type="button" class="action-btn danger js-delete-tx" data-id="${tx.id}" title="Sil">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -222,7 +249,7 @@
 
     function resetTransactionForm() {
         $('#transactionId').val('');
-        $('#transactionModalTitle').text('New Transaction');
+        $('#transactionModalTitle').text('Yeni işlem');
         $('#formError').addClass('d-none').text('');
         $('#addTransactionForm')[0].reset();
         $('#transaction_date').val(new Date().toISOString().slice(0, 10));
@@ -236,7 +263,7 @@
         return $.when(loadAssets()).then(() => {
             return $.getJSON(transactionUrl(id)).done((tx) => {
                 $('#transactionId').val(tx.id);
-                $('#transactionModalTitle').text('Edit Transaction');
+                $('#transactionModalTitle').text('İşlemi düzenle');
                 $('#asset_code').val(tx.asset.code);
                 $('#amount').val(tx.amount);
                 $('#total_paid_try').val(tx.total_paid_try);
@@ -249,7 +276,7 @@
     }
 
     function deleteTransaction(id) {
-        if (!confirm('Are you sure you want to delete this transaction?')) {
+        if (!confirm('Bu işlemi silmek istediğinize emin misiniz?')) {
             return;
         }
         return $.ajax({

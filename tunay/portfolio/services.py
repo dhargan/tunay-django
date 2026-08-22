@@ -37,6 +37,27 @@ def _require_asset_code(asset_code: str) -> str:
     return asset_code
 
 
+def _quote_from_prices(price: Decimal, previous_close: Decimal) -> dict[str, Decimal | str]:
+    if previous_close == 0:
+        change_pct = Decimal('0.00')
+    else:
+        change_pct = _to_decimal(
+            ((price - previous_close) / previous_close) * Decimal('100'),
+            MONEY_QUANTUM,
+        )
+    if change_pct > 0:
+        trend = 'up'
+    elif change_pct < 0:
+        trend = 'down'
+    else:
+        trend = 'neutral'
+    return {
+        'price': price,
+        'change_pct': change_pct,
+        'trend': trend,
+    }
+
+
 def _as_date(value: datetime.date | datetime.datetime) -> datetime.date:
     if isinstance(value, datetime.datetime):
         return value.date()
@@ -67,6 +88,43 @@ class YFinanceFetcher:
         gold_usd = self._fetch_symbol_close(GOLD_FUTURES_SYMBOL, date)
         usdtry = self._fetch_symbol_close(USDTRY_SYMBOL, date)
         return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
+
+    def _fetch_symbol_snapshot(self, symbol: str) -> tuple[Decimal, Decimal]:
+        ticker = yf.Ticker(symbol)
+        current = None
+        previous_close = None
+        try:
+            info = ticker.fast_info
+            current = info.last_price
+            previous_close = getattr(info, 'previous_close', None)
+            if previous_close is None:
+                previous_close = info.get('previousClose')
+        except (KeyError, AttributeError, TypeError, ValueError):
+            pass
+
+        if current is None or previous_close is None:
+            history = ticker.history(period='5d')
+            if history.empty or 'Close' not in history:
+                raise PriceFetchError(f'No current price available for {symbol}')
+            current = history['Close'].iloc[-1]
+            if previous_close is None:
+                previous_close = (
+                    history['Close'].iloc[-2]
+                    if len(history) > 1
+                    else history['Close'].iloc[-1]
+                )
+        return _to_decimal(current), _to_decimal(previous_close)
+
+    def fetch_live_quote(self, asset_code: str) -> dict[str, Decimal | str]:
+        _require_asset_code(asset_code)
+        if asset_code == AssetType.USD:
+            price, previous_close = self._fetch_symbol_snapshot(USDTRY_SYMBOL)
+        else:
+            gold_price, gold_prev = self._fetch_symbol_snapshot(GOLD_FUTURES_SYMBOL)
+            usd_price, usd_prev = self._fetch_symbol_snapshot(USDTRY_SYMBOL)
+            price = _to_decimal((gold_price / TROY_OUNCE_GRAMS) * usd_price)
+            previous_close = _to_decimal((gold_prev / TROY_OUNCE_GRAMS) * usd_prev)
+        return _quote_from_prices(price, previous_close)
 
     def _fetch_symbol_current(self, symbol: str) -> Decimal:
         ticker = yf.Ticker(symbol)
@@ -115,7 +173,12 @@ class PriceService:
         return price
 
     def get_current_price(self, asset_code: str) -> Decimal:
+        """Fetch the live market price; never reads or writes HistoricalPrice."""
         return self.fetcher.fetch_price(_require_asset_code(asset_code))
+
+    def get_live_quote(self, asset_code: str) -> dict[str, Decimal | str]:
+        """Live price plus daily change versus previous close. No cache."""
+        return self.fetcher.fetch_live_quote(_require_asset_code(asset_code))
 
 
 class TransactionService:

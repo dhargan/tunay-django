@@ -2,8 +2,8 @@ from django.db import models
 
 
 class AssetType(models.TextChoices):
-    USD = 'USD', 'US Dollar'
-    GA = 'GA', 'Gram Gold'
+    USD = 'USD', 'ABD Doları'
+    GA = 'GA', 'Gram altın'
 
 
 class HistoricalPrice(models.Model):

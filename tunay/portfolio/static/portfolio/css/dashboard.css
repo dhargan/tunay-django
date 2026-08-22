@@ -53,6 +53,48 @@ body.portfolio-app {
     color: rgba(255, 255, 255, 0.85);
 }
 
+.live-rate-card {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 12px;
+    padding: 0.55rem 0.9rem;
+    min-width: 140px;
+}
+
+.live-rate-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.live-rate-value {
+    font-family: "Josefin Sans", sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 0.15rem;
+}
+
+.live-rate-change {
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-top: 0.1rem;
+}
+
+.live-rate-change.trend-up {
+    color: #9dffc2;
+}
+
+.live-rate-change.trend-down {
+    color: #ffb4bd;
+}
+
+.live-rate-change.trend-neutral {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .highlight {
     color: var(--gold);
 }
