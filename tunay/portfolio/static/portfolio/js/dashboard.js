@@ -5,6 +5,8 @@
         assets: '/portfolio/api/assets/',
     };
 
+    let monthlyPnlChart = null;
+
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -70,6 +72,67 @@
         } else {
             $change.addClass('trend-neutral').text(`- ${signedPct}`);
         }
+    }
+
+    function renderMonthlyPnlChart(payload) {
+        const canvas = document.getElementById('monthlyPnlChart');
+        if (!canvas || typeof Chart === 'undefined') {
+            return;
+        }
+        const data = payload || { months: [], usd_pnl: [], ga_pnl: [] };
+        if (monthlyPnlChart) {
+            monthlyPnlChart.destroy();
+        }
+        monthlyPnlChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: data.months || [],
+                datasets: [
+                    {
+                        label: 'ABD Doları',
+                        data: data.usd_pnl || [],
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                    },
+                    {
+                        label: 'Gram altın',
+                        data: data.ga_pnl || [],
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#333', font: { family: 'Quicksand' } },
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#666' },
+                        grid: { color: '#ece6ee' },
+                    },
+                    y: {
+                        ticks: {
+                            color: '#666',
+                            callback(value) {
+                                return `${Number(value).toLocaleString('tr-TR')} ₺`;
+                            },
+                        },
+                        grid: { color: '#ece6ee' },
+                    },
+                },
+            },
+        });
     }
 
     function pnlClass(value) {
@@ -147,6 +210,7 @@
             const rates = data.live_rates || {};
             renderLiveRate('USD', rates.USD);
             renderLiveRate('GA', rates.GA);
+            renderMonthlyPnlChart(data.monthly_pnl);
         });
     }
 

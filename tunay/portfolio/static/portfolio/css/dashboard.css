@@ -229,9 +229,7 @@ body.portfolio-app {
     color: var(--danger);
 }
 
-.toast-container .toast {
-    background: var(--card);
-    color: var(--text);
-    border: none;
-    box-shadow: var(--shadow);
+.chart-wrap {
+    position: relative;
+    height: 320px;
 }

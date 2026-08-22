@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -305,6 +306,98 @@ class PortfolioAnalyticsService:
             'today_change_try': today_change_try,
             'today_change_percentage': self._pnl_percentage(today_change_try, baseline),
         }
+
+    def get_monthly_pnl_breakdown(self) -> dict[str, list]:
+        transactions = list(Transaction.objects.all().order_by('transaction_date'))
+        if not transactions:
+            return {'months': [], 'usd_pnl': [], 'ga_pnl': []}
+
+        today = timezone.localdate()
+        month_starts = self._month_range(
+            transactions[0].transaction_date.replace(day=1),
+            today.replace(day=1),
+        )
+        usd_pnl = []
+        ga_pnl = []
+        labels = []
+        for month_start in month_starts:
+            labels.append(self._month_label(month_start))
+            usd_pnl.append(self._monthly_asset_pnl(transactions, AssetType.USD, month_start, today))
+            ga_pnl.append(self._monthly_asset_pnl(transactions, AssetType.GA, month_start, today))
+        return {
+            'months': labels,
+            'usd_pnl': usd_pnl,
+            'ga_pnl': ga_pnl,
+        }
+
+    def _monthly_asset_pnl(
+        self,
+        transactions: list[Transaction],
+        asset_code: str,
+        month_start: datetime.date,
+        today: datetime.date,
+    ) -> float:
+        month_end = self._month_end(month_start)
+        is_current_month = month_start.year == today.year and month_start.month == today.month
+        as_of = today if is_current_month else month_end
+        previous_end = month_start - datetime.timedelta(days=1)
+
+        start_qty = Decimal('0')
+        end_qty = Decimal('0')
+        invested = Decimal('0')
+        for transaction in transactions:
+            if transaction.asset != asset_code:
+                continue
+            if transaction.transaction_date <= previous_end:
+                start_qty += transaction.amount
+            if transaction.transaction_date <= as_of:
+                end_qty += transaction.amount
+            if month_start <= transaction.transaction_date <= as_of:
+                invested += transaction.total_paid_try
+
+        if start_qty == 0 and end_qty == 0:
+            return 0.0
+
+        start_value = Decimal('0')
+        if start_qty:
+            start_value = start_qty * self._price_on(asset_code, previous_end)
+        if is_current_month:
+            end_price = self.price_service.get_current_price(asset_code)
+        else:
+            end_price = self._price_on(asset_code, as_of)
+        end_value = end_qty * end_price
+        return float(_to_decimal(end_value - start_value - invested, MONEY_QUANTUM))
+
+    def _price_on(self, asset_code: str, date: datetime.date) -> Decimal:
+        try:
+            return self.price_service.get_historical_price(asset_code, date)
+        except PriceFetchError:
+            return Decimal('0')
+
+    @staticmethod
+    def _month_end(month_start: datetime.date) -> datetime.date:
+        last_day = calendar.monthrange(month_start.year, month_start.month)[1]
+        return month_start.replace(day=last_day)
+
+    @staticmethod
+    def _month_range(start: datetime.date, end: datetime.date) -> list[datetime.date]:
+        months = []
+        current = start
+        while current <= end:
+            months.append(current)
+            if current.month == 12:
+                current = datetime.date(current.year + 1, 1, 1)
+            else:
+                current = datetime.date(current.year, current.month + 1, 1)
+        return months
+
+    @staticmethod
+    def _month_label(month_start: datetime.date) -> str:
+        names = (
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        )
+        return f'{names[month_start.month - 1]} {month_start.year}'
 
     @staticmethod
     def _pnl_percentage(pnl_try: Decimal, invested: Decimal) -> Decimal:

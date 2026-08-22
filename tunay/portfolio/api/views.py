@@ -26,6 +26,9 @@ class DashboardAPIView(APIView):
                 'USD': price_service.get_live_quote('USD'),
                 'GA': price_service.get_live_quote('GA'),
             }
+            metrics['monthly_pnl'] = PortfolioAnalyticsService(
+                price_service=price_service,
+            ).get_monthly_pnl_breakdown()
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(metrics)
