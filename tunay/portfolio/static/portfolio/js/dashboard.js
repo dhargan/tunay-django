@@ -339,12 +339,17 @@
         });
     }
 
+    function setSaveButtonBusy(busy) {
+        $('#transactionSaveBtn').prop('disabled', busy);
+    }
+
     function resetTransactionForm() {
         $('#transactionId').val('');
         $('#transactionModalTitle').text('Yeni işlem');
         $('#formError').addClass('d-none').text('');
         $('#addTransactionForm')[0].reset();
         $('#transaction_date').val(new Date().toISOString().slice(0, 10));
+        setSaveButtonBusy(false);
     }
 
     function transactionUrl(id) {
@@ -429,6 +434,9 @@
 
         $('#addTransactionForm').on('submit', function (event) {
             event.preventDefault();
+            if ($('#transactionSaveBtn').prop('disabled')) {
+                return;
+            }
             const $error = $('#formError').addClass('d-none').text('');
             const transactionId = $('#transactionId').val();
             const payload = {
@@ -438,6 +446,7 @@
                 transaction_date: $('#transaction_date').val(),
             };
 
+            setSaveButtonBusy(true);
             $.ajax({
                 url: transactionId ? transactionUrl(transactionId) : API.transactions,
                 method: transactionId ? 'PUT' : 'POST',
@@ -457,6 +466,7 @@
                 })
                 .fail((xhr) => {
                     $error.removeClass('d-none').text(parseApiError(xhr));
+                    setSaveButtonBusy(false);
                 });
         });
 
