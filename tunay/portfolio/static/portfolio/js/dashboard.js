@@ -9,6 +9,7 @@
     let chartFilter = 'all';
     let historyFilter = 'all';
     let cachedTransactions = [];
+    let liveRates = {};
 
     function matchesAssetFilter(tx, filter) {
         if (filter === 'usd') {
@@ -258,9 +259,11 @@
                 .removeClass('pnl-positive pnl-negative text-secondary')
                 .addClass(pnlClass(data.today_change_percentage));
             const rates = data.live_rates || {};
+            liveRates = rates;
             renderLiveRate('USD', rates.USD);
             renderLiveRate('GA', rates.GA);
             renderMonthlyPnlChart(data.monthly_pnl);
+            renderAssetSummary(cachedTransactions);
         });
     }
 
@@ -270,19 +273,29 @@
             const code = tx.asset.code;
             if (!grouped[code]) {
                 grouped[code] = {
+                    code,
                     name: tx.asset.name,
                     amount: 0,
-                    totalPaid: 0,
                     currentValue: 0,
                     pnl: 0,
                 };
             }
             grouped[code].amount += Number(tx.amount);
-            grouped[code].totalPaid += Number(tx.total_paid_try);
             grouped[code].currentValue += Number(tx.current_value);
             grouped[code].pnl += Number(tx.pnl_try);
         });
         return Object.values(grouped);
+    }
+
+    function unitPriceFor(row) {
+        const quote = liveRates[row.code];
+        if (quote && quote.price != null) {
+            return Number(quote.price);
+        }
+        if (row.amount) {
+            return row.currentValue / row.amount;
+        }
+        return null;
     }
 
     function renderAssetSummary(transactions) {
@@ -290,18 +303,19 @@
         const $body = $('#assetSummaryBody').empty();
         if (!rows.length) {
             $body.append(
-                '<tr class="empty-row"><td colspan="5">Henüz varlık özeti yok.</td></tr>'
+                '<tr class="empty-row"><td colspan="4">Henüz varlık özeti yok.</td></tr>'
             );
             return;
         }
         rows.forEach((row) => {
-            const avgCost = row.amount ? row.totalPaid / row.amount : 0;
+            const unitPrice = unitPriceFor(row);
+            const totalValue =
+                unitPrice != null ? unitPrice * row.amount : row.currentValue;
             $body.append(`
                 <tr>
                     <td>${row.name}</td>
                     <td>${formatQty(row.amount)}</td>
-                    <td>${formatTRY(avgCost, 2)}</td>
-                    <td>${formatTRY(row.currentValue, 2)}</td>
+                    <td>${formatTRY(totalValue, 2)}</td>
                     <td class="${pnlClass(row.pnl)}">${signedTRY(row.pnl)}</td>
                 </tr>
             `);
@@ -318,7 +332,7 @@
                 ? 'Bu filtreye uygun işlem yok.'
                 : 'Henüz işlem yok.';
             $body.append(
-                `<tr class="empty-row"><td colspan="9">${emptyMessage}</td></tr>`
+                `<tr class="empty-row"><td colspan="8">${emptyMessage}</td></tr>`
             );
             return;
         }
@@ -328,7 +342,6 @@
                     <td>${tx.transaction_date}</td>
                     <td>${tx.asset.name}</td>
                     <td>${formatQty(tx.amount)}</td>
-                    <td>${formatTRY(tx.effective_unit_cost, 2)}</td>
                     <td>${formatTRY(tx.total_paid_try, 2)}</td>
                     <td>${formatTRY(tx.spread_fee_try || 0, 2)}</td>
                     <td>${formatTRY(tx.current_value, 2)}</td>
