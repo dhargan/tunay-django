@@ -465,6 +465,7 @@ class PortfolioAnalyticsService:
         buy_cash = Decimal('0')
         today_change_try = Decimal('0')
         start_of_day_value = Decimal('0')
+        asset_breakdown = []
 
         for asset_code, rows in by_asset.items():
             if asset_code not in quotes:
@@ -474,10 +475,21 @@ class PortfolioAnalyticsService:
             prior = [row for row in rows if row.transaction_date < today]
             qty_open, _, _ = _replay_lots(prior, strict=False)
             quantity, cost, realized = _replay_lots(rows, strict=False)
+            market_value = quantity * price
+            unrealized = market_value - cost
             remaining_cost += cost
             realized_total += realized
-            current_total_value += quantity * price
+            current_total_value += market_value
             start_of_day_value += qty_open * previous_close
+            asset_breakdown.append({
+                'code': asset_code,
+                'name': AssetType(asset_code).label,
+                'total_amount': _to_decimal(quantity),
+                'total_cost_try': _to_decimal(cost, MONEY_QUANTUM),
+                'current_market_value': _to_decimal(market_value, MONEY_QUANTUM),
+                'pnl_try': _to_decimal(unrealized + realized, MONEY_QUANTUM),
+                'pnl_percentage': self._pnl_percentage(unrealized, cost),
+            })
             today_buys = Decimal('0')
             today_sells = Decimal('0')
             for row in rows:
@@ -512,6 +524,7 @@ class PortfolioAnalyticsService:
             'today_change_try': today_change_try,
             'today_change_percentage': self._pnl_percentage(today_change_try, baseline),
             'realized_pnl_try': realized_total,
+            'asset_breakdown': asset_breakdown,
         }
 
     def get_monthly_pnl_breakdown(self) -> dict[str, list]:

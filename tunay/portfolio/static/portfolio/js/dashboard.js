@@ -339,12 +339,18 @@
                 unitPrice != null ? unitPrice * row.amount : 0;
             const unrealized = totalValue - row.cost;
             const pnl = unrealized + row.realized;
+            const pnlPercentage = row.cost
+                ? ((totalValue - row.cost) / row.cost) * 100
+                : 0;
             $body.append(`
                 <tr>
                     <td>${row.name}</td>
                     <td>${formatQty(row.amount)}</td>
                     <td>${formatTRY(totalValue, 2)}</td>
-                    <td class="${pnlClass(pnl)}">${signedTRY(pnl)}</td>
+                    <td>
+                        <div class="${pnlClass(pnl)}">${signedTRY(pnl)}</div>
+                        <div class="pnl-pct ${pnlClass(pnlPercentage)}">${formatPct(pnlPercentage)}</div>
+                    </td>
                 </tr>
             `);
         });

@@ -140,6 +140,12 @@ body.portfolio-app {
     color: var(--danger);
 }
 
+.pnl-pct {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.15rem;
+}
+
 .btn-accent {
     background: var(--purple);
     border: none;

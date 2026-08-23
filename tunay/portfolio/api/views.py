@@ -28,6 +28,7 @@ EMPTY_KPI = {
     'today_change_try': 0,
     'today_change_percentage': 0,
     'realized_pnl_try': 0,
+    'asset_breakdown': [],
 }
 
 
