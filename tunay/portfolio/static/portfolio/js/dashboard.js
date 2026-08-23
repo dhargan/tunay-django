@@ -7,7 +7,18 @@
 
     let monthlyPnlChart = null;
     let chartFilter = 'all';
+    let historyFilter = 'all';
     let cachedTransactions = [];
+
+    function matchesAssetFilter(tx, filter) {
+        if (filter === 'usd') {
+            return tx.asset && tx.asset.code === 'USD';
+        }
+        if (filter === 'gold') {
+            return tx.asset && tx.asset.code === 'GA';
+        }
+        return true;
+    }
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -162,6 +173,18 @@
         applyChartFilter(filter);
     }
 
+    function setActiveHistoryFilter(filter) {
+        historyFilter = filter;
+        $('.js-tx-filter').each(function () {
+            const isActive = $(this).data('filter') === filter;
+            $(this)
+                .toggleClass('active', isActive)
+                .toggleClass('btn-accent', isActive)
+                .toggleClass('btn-outline-secondary', !isActive);
+        });
+        renderTransactionHistory(cachedTransactions);
+    }
+
     function pnlClass(value) {
         const amount = Number(value);
         if (amount > 0) {
@@ -286,14 +309,20 @@
     }
 
     function renderTransactionHistory(transactions) {
+        const filtered = (transactions || []).filter((tx) =>
+            matchesAssetFilter(tx, historyFilter)
+        );
         const $body = $('#transactionHistoryBody').empty();
-        if (!transactions.length) {
+        if (!filtered.length) {
+            const emptyMessage = transactions && transactions.length
+                ? 'Bu filtreye uygun işlem yok.'
+                : 'Henüz işlem yok.';
             $body.append(
-                '<tr class="empty-row"><td colspan="9">Henüz işlem yok.</td></tr>'
+                `<tr class="empty-row"><td colspan="9">${emptyMessage}</td></tr>`
             );
             return;
         }
-        transactions.forEach((tx) => {
+        filtered.forEach((tx) => {
             $body.append(`
                 <tr>
                     <td>${tx.transaction_date}</td>
@@ -418,6 +447,10 @@
 
         $(document).on('click', '.js-chart-filter', function () {
             setActiveChartFilter($(this).data('filter'));
+        });
+
+        $(document).on('click', '.js-tx-filter', function () {
+            setActiveHistoryFilter($(this).data('filter'));
         });
 
         $(document).on('click', '.js-edit-tx', function () {

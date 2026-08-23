@@ -106,8 +106,13 @@
         </section>
 
         <section class="panel p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h2 class="panel-title mb-0">İşlem geçmişi ve performans</h2>
+                <div class="btn-group btn-group-sm chart-filter" role="group" aria-label="İşlem filtresi">
+                    <button type="button" class="btn btn-accent js-tx-filter active" data-filter="all">All</button>
+                    <button type="button" class="btn btn-outline-secondary js-tx-filter" data-filter="usd">USD Only</button>
+                    <button type="button" class="btn btn-outline-secondary js-tx-filter" data-filter="gold">Gold Only</button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-dark-fintech table-hover align-middle">
