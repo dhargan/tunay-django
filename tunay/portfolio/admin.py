@@ -10,16 +10,18 @@ from tunay.portfolio.models import (
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
+        'transaction_type',
         'asset',
         'amount',
         'effective_unit_cost',
         'total_paid_try',
         'spread_fee_try',
+        'realized_pnl',
         'transaction_date',
     )
-    list_filter = ('asset', 'transaction_date')
+    list_filter = ('transaction_type', 'asset', 'transaction_date')
     search_fields = ('asset',)
-    readonly_fields = ('effective_unit_cost', 'created_at')
+    readonly_fields = ('effective_unit_cost', 'realized_pnl', 'created_at')
     date_hierarchy = 'transaction_date'
     ordering = ('-transaction_date', '-id')
 

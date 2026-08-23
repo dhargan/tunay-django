@@ -39,27 +39,33 @@
 
     <main class="container pb-5">
         <div class="row g-3 mb-4 align-items-stretch">
-            <div class="col-md-3">
+            <div class="col-6 col-lg">
                 <div class="kpi-card">
                     <div class="kpi-label"><i class="fa-solid fa-wallet me-2"></i>Toplam portföy değeri</div>
                     <div class="kpi-value" id="kpiTotalValue">—</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-lg">
                 <div class="kpi-card">
                     <div class="kpi-label"><i class="fa-solid fa-arrow-trend-up me-2"></i>Kümülatif kâr/zarar</div>
                     <div class="kpi-value" id="kpiPnlTry">—</div>
                     <div class="small" id="kpiPnlPct">—</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-lg">
+                <div class="kpi-card">
+                    <div class="kpi-label"><i class="fa-solid fa-handshake me-2"></i>Gerçekleşen kâr/zarar</div>
+                    <div class="kpi-value" id="kpiRealizedTry">—</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg">
                 <div class="kpi-card">
                     <div class="kpi-label"><i class="fa-solid fa-calendar-day me-2"></i>Bugünkü değişim</div>
                     <div class="kpi-value" id="kpiTodayTry">—</div>
                     <div class="small" id="kpiTodayPct">—</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-12 col-lg">
                 <div class="kpi-card d-flex flex-column justify-content-between">
                     <div class="kpi-label">İşlem</div>
                     <button type="button" class="btn btn-accent w-100 mt-3" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
@@ -119,6 +125,7 @@
                         <tr>
                             <th>Tarih</th>
                             <th>Varlık</th>
+                            <th>Tür</th>
                             <th>Miktar</th>
                             <th>Ödenen</th>
                             <th>Makas</th>
@@ -128,7 +135,7 @@
                         </tr>
                     </thead>
                     <tbody id="transactionHistoryBody">
-                        <tr class="empty-row"><td colspan="8">Yükleniyor...</td></tr>
+                        <tr class="empty-row"><td colspan="9">Yükleniyor...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -153,11 +160,18 @@
                             </select>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label" for="transaction_type">İşlem türü</label>
+                            <select class="form-select" id="transaction_type" name="transaction_type" required>
+                                <option value="BUY">Alış</option>
+                                <option value="SELL">Satış</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label" for="amount">Miktar</label>
                             <input class="form-control" type="number" step="0.0001" min="0" id="amount" name="amount" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="total_paid_try">Ödenen (TRY)</label>
+                            <label class="form-label" for="total_paid_try" id="totalPaidLabel">Ödenen (TRY)</label>
                             <input class="form-control" type="number" step="0.01" min="0" id="total_paid_try" name="total_paid_try" required>
                         </div>
                         <div class="mb-3">

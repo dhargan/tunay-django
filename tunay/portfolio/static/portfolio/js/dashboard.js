@@ -258,6 +258,10 @@
                 .text(formatPct(data.today_change_percentage))
                 .removeClass('pnl-positive pnl-negative text-secondary')
                 .addClass(pnlClass(data.today_change_percentage));
+            $('#kpiRealizedTry')
+                .text(signedTRY(data.realized_pnl_try))
+                .removeClass('pnl-positive pnl-negative text-secondary')
+                .addClass(pnlClass(data.realized_pnl_try));
             const rates = data.live_rates || {};
             liveRates = rates;
             renderLiveRate('USD', rates.USD);
@@ -267,22 +271,47 @@
         });
     }
 
+    function isSell(tx) {
+        return tx.transaction_type === 'SELL';
+    }
+
     function buildAssetSummary(transactions) {
         const grouped = {};
-        transactions.forEach((tx) => {
+        const ordered = [...(transactions || [])].sort((left, right) => {
+            const dateCompare = String(left.transaction_date).localeCompare(
+                String(right.transaction_date)
+            );
+            if (dateCompare !== 0) {
+                return dateCompare;
+            }
+            return Number(left.id) - Number(right.id);
+        });
+        ordered.forEach((tx) => {
             const code = tx.asset.code;
             if (!grouped[code]) {
                 grouped[code] = {
                     code,
                     name: tx.asset.name,
                     amount: 0,
-                    currentValue: 0,
-                    pnl: 0,
+                    cost: 0,
+                    realized: 0,
                 };
             }
-            grouped[code].amount += Number(tx.amount);
-            grouped[code].currentValue += Number(tx.current_value);
-            grouped[code].pnl += Number(tx.pnl_try);
+            const qty = Number(tx.amount);
+            const cash = Number(tx.total_paid_try);
+            if (isSell(tx)) {
+                const avg = grouped[code].amount ? grouped[code].cost / grouped[code].amount : 0;
+                grouped[code].realized += (qty ? cash / qty - avg : 0) * qty;
+                grouped[code].cost -= avg * qty;
+                grouped[code].amount -= qty;
+                if (grouped[code].amount <= 0) {
+                    grouped[code].amount = 0;
+                    grouped[code].cost = 0;
+                }
+            } else {
+                grouped[code].amount += qty;
+                grouped[code].cost += cash;
+            }
         });
         return Object.values(grouped);
     }
@@ -291,9 +320,6 @@
         const quote = liveRates[row.code];
         if (quote && quote.price != null) {
             return Number(quote.price);
-        }
-        if (row.amount) {
-            return row.currentValue / row.amount;
         }
         return null;
     }
@@ -310,13 +336,15 @@
         rows.forEach((row) => {
             const unitPrice = unitPriceFor(row);
             const totalValue =
-                unitPrice != null ? unitPrice * row.amount : row.currentValue;
+                unitPrice != null ? unitPrice * row.amount : 0;
+            const unrealized = totalValue - row.cost;
+            const pnl = unrealized + row.realized;
             $body.append(`
                 <tr>
                     <td>${row.name}</td>
                     <td>${formatQty(row.amount)}</td>
                     <td>${formatTRY(totalValue, 2)}</td>
-                    <td class="${pnlClass(row.pnl)}">${signedTRY(row.pnl)}</td>
+                    <td class="${pnlClass(pnl)}">${signedTRY(pnl)}</td>
                 </tr>
             `);
         });
@@ -332,20 +360,26 @@
                 ? 'Bu filtreye uygun işlem yok.'
                 : 'Henüz işlem yok.';
             $body.append(
-                `<tr class="empty-row"><td colspan="8">${emptyMessage}</td></tr>`
+                `<tr class="empty-row"><td colspan="9">${emptyMessage}</td></tr>`
             );
             return;
         }
         filtered.forEach((tx) => {
+            const sell = isSell(tx);
+            const typeLabel = sell ? 'Satış' : 'Alış';
+            const typeClass = sell ? 'tx-badge-sell' : 'tx-badge-buy';
+            const qty = sell ? -Number(tx.amount) : Number(tx.amount);
+            const pnl = sell ? tx.realized_pnl : tx.pnl_try;
             $body.append(`
-                <tr>
+                <tr class="${sell ? 'tx-row-sell' : ''}">
                     <td>${tx.transaction_date}</td>
                     <td>${tx.asset.name}</td>
-                    <td>${formatQty(tx.amount)}</td>
+                    <td><span class="tx-badge ${typeClass}">${typeLabel}</span></td>
+                    <td>${formatQty(qty)}</td>
                     <td>${formatTRY(tx.total_paid_try, 2)}</td>
                     <td>${formatTRY(tx.spread_fee_try || 0, 2)}</td>
-                    <td>${formatTRY(tx.current_value, 2)}</td>
-                    <td class="${pnlClass(tx.pnl_try)}">${signedTRY(tx.pnl_try)}</td>
+                    <td>${sell ? '—' : formatTRY(tx.current_value, 2)}</td>
+                    <td class="${pnlClass(pnl)}">${signedTRY(pnl)}</td>
                     <td class="text-nowrap">
                         <button type="button" class="action-btn js-edit-tx" data-id="${tx.id}" title="Düzenle">
                             <i class="fa-solid fa-pencil"></i>
@@ -385,13 +419,20 @@
         $('#transactionSaveBtn').prop('disabled', busy);
     }
 
+    function syncPaidLabel() {
+        const isSellSelected = $('#transaction_type').val() === 'SELL';
+        $('#totalPaidLabel').text(isSellSelected ? 'Tahsil (TRY)' : 'Ödenen (TRY)');
+    }
+
     function resetTransactionForm() {
         $('#transactionId').val('');
         $('#transactionModalTitle').text('Yeni işlem');
         $('#formError').addClass('d-none').text('');
         $('#addTransactionForm')[0].reset();
+        $('#transaction_type').val('BUY');
         $('#transaction_date').val(new Date().toISOString().slice(0, 10));
         setSaveButtonBusy(false);
+        syncPaidLabel();
     }
 
     function transactionUrl(id) {
@@ -402,9 +443,11 @@
         $('#transactionId').val(tx.id);
         $('#transactionModalTitle').text('İşlemi düzenle');
         $('#asset_code').val(tx.asset && tx.asset.code);
+        $('#transaction_type').val(tx.transaction_type || 'BUY');
         $('#amount').val(tx.amount);
         $('#total_paid_try').val(tx.total_paid_try);
         $('#transaction_date').val(tx.transaction_date);
+        syncPaidLabel();
         bootstrap.Modal.getOrCreateInstance(
             document.getElementById('addTransactionModal')
         ).show();
@@ -458,6 +501,8 @@
         loadAssets();
         reloadAll();
 
+        $(document).on('change', '#transaction_type', syncPaidLabel);
+
         $(document).on('click', '.js-chart-filter', function () {
             setActiveChartFilter($(this).data('filter'));
         });
@@ -487,6 +532,7 @@
             const transactionId = $('#transactionId').val();
             const payload = {
                 asset_code: $('#asset_code').val(),
+                transaction_type: $('#transaction_type').val(),
                 amount: $('#amount').val(),
                 total_paid_try: $('#total_paid_try').val(),
                 transaction_date: $('#transaction_date').val(),

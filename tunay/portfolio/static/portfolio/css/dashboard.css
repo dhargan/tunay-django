@@ -234,6 +234,26 @@ body.portfolio-app {
     height: 320px;
 }
 
-.chart-filter .btn {
-    font-weight: 600;
+.tx-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+}
+
+.tx-badge-buy {
+    background: rgba(90, 143, 109, 0.15);
+    color: var(--positive);
+}
+
+.tx-badge-sell {
+    background: rgba(196, 92, 106, 0.16);
+    color: var(--danger);
+}
+
+.tx-row-sell td {
+    background: rgba(196, 92, 106, 0.04);
 }

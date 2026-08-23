@@ -1,11 +1,15 @@
 from rest_framework import serializers
 
-from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction
+from tunay.portfolio.models import AssetType, HistoricalPrice, Transaction, TransactionType
 from tunay.portfolio.services import PortfolioAnalyticsService, PriceFetchError
 
 
 class TransactionCreateSerializer(serializers.Serializer):
     asset_code = serializers.ChoiceField(choices=AssetType.choices)
+    transaction_type = serializers.ChoiceField(
+        choices=TransactionType.choices,
+        default=TransactionType.BUY,
+    )
     amount = serializers.DecimalField(max_digits=12, decimal_places=4)
     total_paid_try = serializers.DecimalField(max_digits=12, decimal_places=2)
     transaction_date = serializers.DateField()
@@ -27,9 +31,11 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'asset',
+            'transaction_type',
             'amount',
             'total_paid_try',
             'spread_fee_try',
+            'realized_pnl',
             'transaction_date',
             'created_at',
             'effective_unit_cost',
@@ -56,6 +62,18 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
                     transaction
                 )
             except PriceFetchError:
+                if transaction.transaction_type == TransactionType.SELL:
+                    realized = transaction.realized_pnl or 0
+                    self._pnl_cache[transaction.pk] = {
+                        'current_value': 0,
+                        'pnl_try': realized,
+                        'pnl_percentage': self._analytics._pnl_percentage(
+                            realized,
+                            transaction.total_paid_try,
+                        ),
+                        'spread_fee_try': transaction.spread_fee_try,
+                    }
+                    return self._pnl_cache[transaction.pk]
                 last_price = (
                     HistoricalPrice.objects.filter(asset=transaction.asset)
                     .order_by('-date')

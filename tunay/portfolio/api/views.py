@@ -11,6 +11,7 @@ from tunay.portfolio.api.serializers import (
 )
 from tunay.portfolio.models import AssetType, Transaction
 from tunay.portfolio.services import (
+    InsufficientHoldingsError,
     PriceFetchError,
     PortfolioAnalyticsService,
     TransactionService,
@@ -26,6 +27,7 @@ EMPTY_KPI = {
     'total_pnl_percentage': 0,
     'today_change_try': 0,
     'today_change_percentage': 0,
+    'realized_pnl_try': 0,
 }
 
 
@@ -96,6 +98,10 @@ class TransactionViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = {
             'asset_code': serializer.validated_data.get('asset_code', transaction.asset),
+            'transaction_type': serializer.validated_data.get(
+                'transaction_type',
+                transaction.transaction_type,
+            ),
             'amount': serializer.validated_data.get('amount', transaction.amount),
             'total_paid_try': serializer.validated_data.get(
                 'total_paid_try',
@@ -116,6 +122,8 @@ class TransactionViewSet(ModelViewSet):
             else:
                 saved = service.update_transaction(transaction, **data)
         except UnknownAssetError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InsufficientHoldingsError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except PriceFetchError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)

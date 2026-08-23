@@ -12,6 +12,7 @@ from tunay.portfolio.models import (
     HistoricalPrice,
     MonthlyPortfolioSnapshot,
     Transaction,
+    TransactionType,
 )
 
 USDTRY_SYMBOL = 'USDTRY=X'
@@ -28,6 +29,10 @@ class PriceFetchError(Exception):
 
 class UnknownAssetError(ValueError):
     """Raised when an asset code is not a known AssetType."""
+
+
+class InsufficientHoldingsError(ValueError):
+    """Raised when a SELL exceeds remaining quantity of an asset."""
 
 
 def _to_decimal(value: object, quantum: Decimal = PRICE_QUANTUM) -> Decimal:
@@ -70,6 +75,67 @@ def _as_date(value: datetime.date | datetime.datetime) -> datetime.date:
     if isinstance(value, datetime.datetime):
         return value.date()
     return value
+
+
+def _is_sell(transaction: Transaction) -> bool:
+    return transaction.transaction_type == TransactionType.SELL
+
+
+def _apply_lot(
+    quantity: Decimal,
+    cost: Decimal,
+    transaction: Transaction,
+    *,
+    strict: bool = True,
+) -> tuple[Decimal, Decimal, Decimal | None]:
+    amount = _to_decimal(transaction.amount)
+    cash = _to_decimal(transaction.total_paid_try, MONEY_QUANTUM)
+    if _is_sell(transaction):
+        if amount > quantity:
+            if strict:
+                raise InsufficientHoldingsError(
+                    f'Yetersiz bakiye: {transaction.asset} için {amount} satılamaz '
+                    f'(mevcut {quantity}).'
+                )
+            amount = quantity
+        if quantity <= 0 or amount <= 0:
+            return quantity, cost, Decimal('0.00')
+        average_cost = cost / quantity
+        sale_price = cash / amount if amount else Decimal('0')
+        realized = _to_decimal((sale_price - average_cost) * amount, MONEY_QUANTUM)
+        quantity -= amount
+        cost -= average_cost * amount
+        if quantity <= 0:
+            quantity = Decimal('0')
+            cost = Decimal('0')
+        else:
+            quantity = _to_decimal(quantity)
+            cost = _to_decimal(cost, MONEY_QUANTUM)
+        return quantity, cost, realized
+
+    quantity = _to_decimal(quantity + amount)
+    cost = _to_decimal(cost + cash, MONEY_QUANTUM)
+    return quantity, cost, None
+
+
+def _replay_lots(
+    transactions: list[Transaction],
+    *,
+    strict: bool = True,
+) -> tuple[Decimal, Decimal, Decimal]:
+    quantity = Decimal('0')
+    cost = Decimal('0')
+    realized_total = Decimal('0')
+    for transaction in transactions:
+        quantity, cost, realized = _apply_lot(
+            quantity,
+            cost,
+            transaction,
+            strict=strict,
+        )
+        if realized is not None:
+            realized_total += realized
+    return quantity, cost, _to_decimal(realized_total, MONEY_QUANTUM)
 
 
 class YFinanceFetcher:
@@ -223,13 +289,50 @@ class TransactionService:
         amount: Decimal,
         total_paid_try: Decimal,
         transaction_date: datetime.date,
+        transaction_type: str,
     ) -> Decimal:
         market_price = self.price_service.get_historical_price(asset_code, transaction_date)
         market_value = amount * market_price
+        if transaction_type == TransactionType.SELL:
+            return _to_decimal(
+                max(Decimal('0'), market_value - total_paid_try),
+                MONEY_QUANTUM,
+            )
         return _to_decimal(
             max(Decimal('0'), total_paid_try - market_value),
             MONEY_QUANTUM,
         )
+
+    def _realized_pnl_for(
+        self,
+        draft: Transaction,
+        exclude_pk: int | None = None,
+    ) -> Decimal | None:
+        existing = list(
+            Transaction.objects.exclude(pk=exclude_pk or 0).order_by(
+                'transaction_date',
+                'id',
+            )
+        )
+        combined = existing + [draft]
+        combined.sort(key=lambda tx: (tx.transaction_date, tx.pk or 10**18))
+        realized = None
+        by_asset: dict[str, list[Transaction]] = {}
+        for transaction in combined:
+            by_asset.setdefault(transaction.asset, []).append(transaction)
+        for rows in by_asset.values():
+            quantity = Decimal('0')
+            cost = Decimal('0')
+            for transaction in rows:
+                quantity, cost, lot_realized = _apply_lot(
+                    quantity,
+                    cost,
+                    transaction,
+                    strict=True,
+                )
+                if transaction is draft:
+                    realized = lot_realized
+        return realized
 
     def create_transaction(
         self,
@@ -237,13 +340,24 @@ class TransactionService:
         amount: Decimal,
         total_paid_try: Decimal,
         transaction_date: datetime.date,
+        transaction_type: str = TransactionType.BUY,
     ) -> Transaction:
         asset_code = _require_asset_code(asset_code)
         transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
+        transaction_type = transaction_type or TransactionType.BUY
+        draft = Transaction(
+            asset=asset_code,
+            transaction_type=transaction_type,
+            amount=amount,
+            total_paid_try=total_paid_try,
+            transaction_date=transaction_date,
+        )
+        realized_pnl = self._realized_pnl_for(draft)
         created = Transaction.objects.create(
             asset=asset_code,
+            transaction_type=transaction_type,
             amount=amount,
             total_paid_try=total_paid_try,
             spread_fee_try=self._spread_fee(
@@ -251,7 +365,9 @@ class TransactionService:
                 amount,
                 total_paid_try,
                 transaction_date,
+                transaction_type,
             ),
+            realized_pnl=realized_pnl,
             transaction_date=transaction_date,
         )
         self._refresh_monthly_snapshots()
@@ -264,20 +380,34 @@ class TransactionService:
         amount: Decimal,
         total_paid_try: Decimal,
         transaction_date: datetime.date,
+        transaction_type: str | None = None,
     ) -> Transaction:
         asset_code = _require_asset_code(asset_code)
         transaction_date = _as_date(transaction_date)
         amount = _to_decimal(amount)
         total_paid_try = _to_decimal(total_paid_try, MONEY_QUANTUM)
+        transaction_type = transaction_type or transaction.transaction_type
+        draft = Transaction(
+            pk=transaction.pk,
+            asset=asset_code,
+            transaction_type=transaction_type,
+            amount=amount,
+            total_paid_try=total_paid_try,
+            transaction_date=transaction_date,
+        )
+        realized_pnl = self._realized_pnl_for(draft, exclude_pk=transaction.pk)
         transaction.asset = asset_code
+        transaction.transaction_type = transaction_type
         transaction.amount = amount
         transaction.total_paid_try = total_paid_try
         transaction.transaction_date = transaction_date
+        transaction.realized_pnl = realized_pnl
         transaction.spread_fee_try = self._spread_fee(
             asset_code,
             amount,
             total_paid_try,
             transaction_date,
+            transaction_type,
         )
         transaction.save()
         self._refresh_monthly_snapshots()
@@ -296,6 +426,20 @@ class PortfolioAnalyticsService:
         self.price_service = price_service or PriceService()
 
     def calculate_transaction_pnl(self, transaction: Transaction) -> dict[str, Decimal | None]:
+        if _is_sell(transaction):
+            realized = transaction.realized_pnl
+            if realized is None:
+                realized = Decimal('0')
+            realized = _to_decimal(realized, MONEY_QUANTUM)
+            return {
+                'current_value': Decimal('0.00'),
+                'pnl_try': realized,
+                'pnl_percentage': self._pnl_percentage(
+                    realized,
+                    transaction.total_paid_try,
+                ),
+                'spread_fee_try': transaction.spread_fee_try,
+            }
         current_price = self.price_service.get_current_price(transaction.asset)
         current_value = _to_decimal(transaction.amount * current_price, MONEY_QUANTUM)
         pnl_try = _to_decimal(current_value - transaction.total_paid_try, MONEY_QUANTUM)
@@ -308,42 +452,66 @@ class PortfolioAnalyticsService:
         }
 
     def calculate_cumulative_pnl(self) -> dict[str, Decimal]:
-        transactions = list(Transaction.objects.all())
+        transactions = list(Transaction.objects.order_by('transaction_date', 'id'))
         today = timezone.localdate()
-        total_invested = Decimal('0')
+        by_asset: dict[str, list[Transaction]] = {}
+        for transaction in transactions:
+            by_asset.setdefault(transaction.asset, []).append(transaction)
+
+        quotes: dict[str, dict[str, Decimal | str]] = {}
+        remaining_cost = Decimal('0')
         current_total_value = Decimal('0')
+        realized_total = Decimal('0')
+        buy_cash = Decimal('0')
         today_change_try = Decimal('0')
         start_of_day_value = Decimal('0')
-        quotes: dict[str, dict[str, Decimal | str]] = {}
 
-        for transaction in transactions:
-            total_invested += transaction.total_paid_try
-            code = transaction.asset
-            if code not in quotes:
-                quotes[code] = self.price_service.get_live_quote(code)
-            price = quotes[code]['price']
-            previous_close = quotes[code]['previous_close']
-            current_value = transaction.amount * price
-            current_total_value += current_value
+        for asset_code, rows in by_asset.items():
+            if asset_code not in quotes:
+                quotes[asset_code] = self.price_service.get_live_quote(asset_code)
+            price = quotes[asset_code]['price']
+            previous_close = quotes[asset_code]['previous_close']
+            prior = [row for row in rows if row.transaction_date < today]
+            qty_open, _, _ = _replay_lots(prior, strict=False)
+            quantity, cost, realized = _replay_lots(rows, strict=False)
+            remaining_cost += cost
+            realized_total += realized
+            current_total_value += quantity * price
+            start_of_day_value += qty_open * previous_close
+            today_buys = Decimal('0')
+            today_sells = Decimal('0')
+            for row in rows:
+                if not _is_sell(row):
+                    buy_cash += row.total_paid_try
+                if row.transaction_date != today:
+                    continue
+                if _is_sell(row):
+                    today_sells += row.total_paid_try
+                else:
+                    today_buys += row.total_paid_try
+            today_change_try += (
+                quantity * price
+                - qty_open * previous_close
+                + today_sells
+                - today_buys
+            )
 
-            if transaction.transaction_date < today:
-                start_of_day_value += transaction.amount * previous_close
-                today_change_try += transaction.amount * (price - previous_close)
-            elif transaction.transaction_date == today:
-                today_change_try += current_value - transaction.total_paid_try
-
-        total_invested = _to_decimal(total_invested, MONEY_QUANTUM)
+        remaining_cost = _to_decimal(remaining_cost, MONEY_QUANTUM)
         current_total_value = _to_decimal(current_total_value, MONEY_QUANTUM)
-        total_pnl_try = _to_decimal(current_total_value - total_invested, MONEY_QUANTUM)
+        realized_total = _to_decimal(realized_total, MONEY_QUANTUM)
+        buy_cash = _to_decimal(buy_cash, MONEY_QUANTUM)
+        unrealized = _to_decimal(current_total_value - remaining_cost, MONEY_QUANTUM)
+        total_pnl_try = _to_decimal(unrealized + realized_total, MONEY_QUANTUM)
         today_change_try = _to_decimal(today_change_try, MONEY_QUANTUM)
-        baseline = start_of_day_value if start_of_day_value else total_invested
+        baseline = start_of_day_value if start_of_day_value else buy_cash
         return {
-            'total_invested': total_invested,
+            'total_invested': remaining_cost,
             'current_total_value': current_total_value,
             'total_pnl_try': total_pnl_try,
-            'total_pnl_percentage': self._pnl_percentage(total_pnl_try, total_invested),
+            'total_pnl_percentage': self._pnl_percentage(total_pnl_try, buy_cash),
             'today_change_try': today_change_try,
             'today_change_percentage': self._pnl_percentage(today_change_try, baseline),
+            'realized_pnl_try': realized_total,
         }
 
     def get_monthly_pnl_breakdown(self) -> dict[str, list]:
@@ -370,7 +538,7 @@ class PortfolioAnalyticsService:
 
     def recalculate_monthly_snapshots(self) -> None:
         MonthlyPortfolioSnapshot.objects.all().delete()
-        transactions = list(Transaction.objects.order_by('transaction_date'))
+        transactions = list(Transaction.objects.order_by('transaction_date', 'id'))
         if not transactions:
             return
 
@@ -383,16 +551,16 @@ class PortfolioAnalyticsService:
         for month_start in month_starts:
             as_of = min(self._month_end(month_start), today)
             for asset_code in AssetType.values:
-                total_amount = Decimal('0')
-                total_cost_try = Decimal('0')
-                for transaction in transactions:
-                    if transaction.asset != asset_code:
-                        continue
-                    if transaction.transaction_date > as_of:
-                        continue
-                    total_amount += transaction.amount
-                    total_cost_try += transaction.total_paid_try
-
+                rows = [
+                    transaction
+                    for transaction in transactions
+                    if transaction.asset == asset_code
+                    and transaction.transaction_date <= as_of
+                ]
+                total_amount, total_cost_try, realized = _replay_lots(
+                    rows,
+                    strict=False,
+                )
                 market_value_try = Decimal('0')
                 if total_amount:
                     try:
@@ -401,6 +569,7 @@ class PortfolioAnalyticsService:
                         price = Decimal('0')
                     market_value_try = _to_decimal(total_amount * price, MONEY_QUANTUM)
                 total_cost_try = _to_decimal(total_cost_try, MONEY_QUANTUM)
+                unrealized = market_value_try - total_cost_try
                 snapshots.append(
                     MonthlyPortfolioSnapshot(
                         year=month_start.year,
@@ -409,7 +578,7 @@ class PortfolioAnalyticsService:
                         total_amount=_to_decimal(total_amount),
                         total_cost_try=total_cost_try,
                         market_value_try=market_value_try,
-                        pnl_try=_to_decimal(market_value_try - total_cost_try, MONEY_QUANTUM),
+                        pnl_try=_to_decimal(unrealized + realized, MONEY_QUANTUM),
                     )
                 )
         MonthlyPortfolioSnapshot.objects.bulk_create(snapshots)
