@@ -1,6 +1,6 @@
 import logging
 
-from rest_framework import status
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -30,6 +30,8 @@ EMPTY_KPI = {
 
 
 class DashboardAPIView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
     def get(self, request):
         analytics = PortfolioAnalyticsService()
         metrics = dict(EMPTY_KPI)
@@ -58,6 +60,8 @@ class DashboardAPIView(APIView):
 
 
 class AssetListView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
     def get(self, request):
         return Response([
             {'code': code, 'name': label}
@@ -66,6 +70,7 @@ class AssetListView(APIView):
 
 
 class TransactionViewSet(ModelViewSet):
+    permission_classes = [permissions.IsAdminUser]
     queryset = Transaction.objects.all().order_by('-transaction_date', '-id')
     http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
 
