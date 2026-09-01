@@ -6,4 +6,4 @@ python-dotenv==1.1.0
 openai==1.70.0
 dj-database-url==3.0.1
 psycopg[binary]==3.2.10
-yfinance==1.6.0
+evds==0.4.0

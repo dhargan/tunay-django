@@ -22,6 +22,7 @@ env_path = os.path.join(Path(__file__).resolve().parent, '.env')
 load_dotenv(dotenv_path=env_path)
 
 OPENAI_SECRET_KEY = os.getenv('OPENAI_SECRET_KEY')
+TCMB_EVDS_API_KEY = os.getenv('TCMB_EVDS_API_KEY')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')

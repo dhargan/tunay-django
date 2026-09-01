@@ -4,8 +4,10 @@ import calendar
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
-import yfinance as yf
+import pandas as pd
+from django.conf import settings
 from django.utils import timezone
+from evds import evdsAPI
 
 from tunay.portfolio.models import (
     AssetType,
@@ -15,16 +17,17 @@ from tunay.portfolio.models import (
     TransactionType,
 )
 
-USDTRY_SYMBOL = 'USDTRY=X'
-GOLD_FUTURES_SYMBOL = 'GC=F'
+USD_TRY_SERIES = 'TP.DK.USD.A.YTL'
+GOLD_GRAM_SERIES = 'TP.MK.KUL.YTL'
+GOLD_ONS_USD_SERIES = 'TP.ALTINPIYASA.KAP03'
 TROY_OUNCE_GRAMS = Decimal('31.1034768')
-HISTORY_LOOKBACK_DAYS = 21
+HISTORY_LOOKBACK_DAYS = 30
 PRICE_QUANTUM = Decimal('0.0001')
 MONEY_QUANTUM = Decimal('0.01')
 
 
 class PriceFetchError(Exception):
-    """Raised when a Yahoo Finance price cannot be resolved."""
+    """Raised when a TCMB EVDS price cannot be resolved."""
 
 
 class UnknownAssetError(ValueError):
@@ -138,126 +141,199 @@ def _replay_lots(
     return quantity, cost, _to_decimal(realized_total, MONEY_QUANTUM)
 
 
-class YFinanceFetcher:
+def _format_evds_date(value: datetime.date) -> str:
+    return value.strftime('%d-%m-%Y')
+
+
+def _parse_evds_date(value: object) -> datetime.date | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    text = str(value).strip()
+    if not text or text in {'-', 'None', 'nan'}:
+        return None
+    for fmt in ('%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y'):
+        try:
+            return datetime.datetime.strptime(text[:10], fmt).date()
+        except ValueError:
+            continue
+    parsed = pd.to_datetime(text, dayfirst=True, errors='coerce')
+    if pd.isna(parsed):
+        return None
+    return parsed.date()
+
+
+def _to_rate(value: object) -> Decimal | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    text = str(value).strip().replace(',', '.')
+    if not text or text in {'-', 'None', 'nan'}:
+        return None
+    try:
+        return _to_decimal(text)
+    except Exception:
+        return None
+
+
+class EvdsFetcher:
+    def __init__(self, api_key: str | None = None):
+        self._api_key = api_key
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            key = self._api_key or getattr(settings, 'TCMB_EVDS_API_KEY', None)
+            if not key:
+                raise PriceFetchError('TCMB_EVDS_API_KEY is not configured')
+            self._client = evdsAPI(key)
+        return self._client
+
+    def get_rate(
+        self,
+        asset_code: str,
+        date: datetime.date | None = None,
+    ) -> Decimal:
+        return self.fetch_price(asset_code, date)
+
     def fetch_price(
         self,
         asset_code: str,
         date: datetime.date | None = None,
     ) -> Decimal:
         _require_asset_code(asset_code)
-        if date is None:
-            return self._current_asset_price(asset_code)
-        return self._historical_asset_price(asset_code, _as_date(date))
-
-    def _current_asset_price(self, asset_code: str) -> Decimal:
-        if asset_code == AssetType.USD:
-            return self._fetch_symbol_current(USDTRY_SYMBOL)
-        gold_usd = self._fetch_symbol_current(GOLD_FUTURES_SYMBOL)
-        usdtry = self._fetch_symbol_current(USDTRY_SYMBOL)
-        return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
-
-    def _historical_asset_price(self, asset_code: str, date: datetime.date) -> Decimal:
-        if asset_code == AssetType.USD:
-            return self._fetch_symbol_close(USDTRY_SYMBOL, date)
-        gold_usd = self._fetch_symbol_close(GOLD_FUTURES_SYMBOL, date)
-        usdtry = self._fetch_symbol_close(USDTRY_SYMBOL, date)
-        return _to_decimal((gold_usd / TROY_OUNCE_GRAMS) * usdtry)
-
-    def _fetch_symbol_snapshot(self, symbol: str) -> tuple[Decimal, Decimal]:
-        try:
-            return self._fetch_symbol_snapshot_unsafe(symbol)
-        except PriceFetchError:
-            raise
-        except Exception as exc:
-            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
-
-    def _fetch_symbol_snapshot_unsafe(self, symbol: str) -> tuple[Decimal, Decimal]:
-        ticker = yf.Ticker(symbol)
-        current = None
-        previous_close = None
-        try:
-            info = ticker.fast_info
-            current = info.last_price
-            previous_close = getattr(info, 'previous_close', None)
-            if previous_close is None:
-                previous_close = info.get('previousClose')
-        except (KeyError, AttributeError, TypeError, ValueError):
-            pass
-
-        if current is None or previous_close is None:
-            history = ticker.history(period='5d')
-            if history.empty or 'Close' not in history:
-                raise PriceFetchError(f'No current price available for {symbol}')
-            current = history['Close'].iloc[-1]
-            if previous_close is None:
-                previous_close = (
-                    history['Close'].iloc[-2]
-                    if len(history) > 1
-                    else history['Close'].iloc[-1]
-                )
-        return _to_decimal(current), _to_decimal(previous_close)
+        as_of = timezone.localdate() if date is None else _as_date(date)
+        observations = self._series_observations(asset_code, as_of)
+        latest = self._latest_on_or_before(observations, as_of)
+        if latest is None:
+            raise PriceFetchError(
+                f'No TCMB EVDS rate available for {asset_code} on or before {as_of}'
+            )
+        return latest[1]
 
     def fetch_live_quote(self, asset_code: str) -> dict[str, Decimal | str]:
         _require_asset_code(asset_code)
+        as_of = timezone.localdate()
+        observations = self._series_observations(asset_code, as_of)
+        latest = self._latest_on_or_before(observations, as_of)
+        if latest is None:
+            raise PriceFetchError(f'No TCMB EVDS live rate available for {asset_code}')
+        previous = self._latest_on_or_before(observations, latest[0] - datetime.timedelta(days=1))
+        previous_close = previous[1] if previous is not None else latest[1]
+        return _quote_from_prices(latest[1], previous_close)
+
+    def _series_observations(
+        self,
+        asset_code: str,
+        as_of: datetime.date,
+    ) -> list[tuple[datetime.date, Decimal]]:
+        start = as_of - datetime.timedelta(days=HISTORY_LOOKBACK_DAYS)
         if asset_code == AssetType.USD:
-            price, previous_close = self._fetch_symbol_snapshot(USDTRY_SYMBOL)
-        else:
-            gold_price, gold_prev = self._fetch_symbol_snapshot(GOLD_FUTURES_SYMBOL)
-            usd_price, usd_prev = self._fetch_symbol_snapshot(USDTRY_SYMBOL)
-            price = _to_decimal((gold_price / TROY_OUNCE_GRAMS) * usd_price)
-            previous_close = _to_decimal((gold_prev / TROY_OUNCE_GRAMS) * usd_prev)
-        return _quote_from_prices(price, previous_close)
+            return self._fetch_series(USD_TRY_SERIES, start, as_of, frequency=2)
+        gold_observations = self._gold_from_ons_and_usd(start, as_of)
+        if gold_observations:
+            return gold_observations
+        return self._fetch_series(GOLD_GRAM_SERIES, start, as_of)
 
-    def _fetch_symbol_current(self, symbol: str) -> Decimal:
+    def _gold_from_ons_and_usd(
+        self,
+        start: datetime.date,
+        as_of: datetime.date,
+    ) -> list[tuple[datetime.date, Decimal]]:
+        usd_rows = dict(self._fetch_series(USD_TRY_SERIES, start, as_of, frequency=2))
+        ons_rows = dict(
+            self._fetch_series(GOLD_ONS_USD_SERIES, start, as_of, frequency=2)
+        )
+        if not usd_rows or not ons_rows:
+            return []
+        combined = []
+        for day, ounce_usd in sorted(ons_rows.items()):
+            usdtry = self._latest_on_or_before(list(usd_rows.items()), day)
+            if usdtry is None:
+                continue
+            combined.append(
+                (day, _to_decimal((ounce_usd / TROY_OUNCE_GRAMS) * usdtry[1]))
+            )
+        return combined
+
+    def _fetch_series(
+        self,
+        series_code: str,
+        start: datetime.date,
+        end: datetime.date,
+        frequency: int | str = '',
+    ) -> list[tuple[datetime.date, Decimal]]:
         try:
-            return self._fetch_symbol_current_unsafe(symbol)
-        except PriceFetchError:
-            raise
-        except Exception as exc:
-            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
+            kwargs = {
+                'startdate': _format_evds_date(start),
+                'enddate': _format_evds_date(end),
+            }
+            if frequency != '':
+                kwargs['frequency'] = frequency
+            frame = self.client.get_data([series_code], **kwargs)
+        except Exception:
+            return []
 
-    def _fetch_symbol_current_unsafe(self, symbol: str) -> Decimal:
-        ticker = yf.Ticker(symbol)
-        try:
-            last_price = ticker.fast_info.last_price
-            if last_price is not None:
-                return _to_decimal(last_price)
-        except (KeyError, AttributeError, TypeError, ValueError):
-            pass
+        if frame is None or getattr(frame, 'empty', True):
+            return []
 
-        history = ticker.history(period='5d')
-        if history.empty or 'Close' not in history:
-            raise PriceFetchError(f'No current price available for {symbol}')
-        return _to_decimal(history['Close'].iloc[-1])
+        date_column = self._date_column(frame)
+        value_column = self._value_column(frame, series_code)
+        observations = []
+        for _, row in frame.iterrows():
+            day = _parse_evds_date(row[date_column])
+            rate = _to_rate(row[value_column])
+            if day is None or rate is None:
+                continue
+            observations.append((day, rate))
+        observations.sort(key=lambda item: item[0])
+        return observations
 
-    def _fetch_symbol_close(self, symbol: str, date: datetime.date) -> Decimal:
-        try:
-            return self._fetch_symbol_close_unsafe(symbol, date)
-        except PriceFetchError:
-            raise
-        except Exception as exc:
-            raise PriceFetchError(f'Yahoo Finance request failed for {symbol}') from exc
+    @staticmethod
+    def _date_column(frame: pd.DataFrame) -> str:
+        for name in ('Tarih', 'TARIH', 'Date', 'date'):
+            if name in frame.columns:
+                return name
+        return frame.columns[0]
 
-    def _fetch_symbol_close_unsafe(self, symbol: str, date: datetime.date) -> Decimal:
-        start = date - datetime.timedelta(days=HISTORY_LOOKBACK_DAYS)
-        end = date + datetime.timedelta(days=1)
-        history = yf.Ticker(symbol).history(start=start, end=end, auto_adjust=True)
-        if history.empty or 'Close' not in history:
-            raise PriceFetchError(f'No historical price available for {symbol} on {date}')
+    @staticmethod
+    def _value_column(frame: pd.DataFrame, series_code: str) -> str:
+        preferred = series_code.replace('.', '_')
+        if preferred in frame.columns:
+            return preferred
+        skipped = {'Tarih', 'TARIH', 'Date', 'date', 'UNIXTIME', 'YEARWEEK'}
+        for name in frame.columns:
+            if name not in skipped:
+                return name
+        raise PriceFetchError(f'No value column in EVDS response for {series_code}')
 
-        close = None
-        for timestamp, row in history.iterrows():
-            if timestamp.date() <= date:
-                close = row['Close']
-
-        if close is None:
-            raise PriceFetchError(f'No market close on or before {date} for {symbol}')
-        return _to_decimal(close)
+    @staticmethod
+    def _latest_on_or_before(
+        observations: list[tuple[datetime.date, Decimal]],
+        as_of: datetime.date,
+    ) -> tuple[datetime.date, Decimal] | None:
+        latest = None
+        for day, rate in observations:
+            if day <= as_of and (latest is None or day > latest[0]):
+                latest = (day, rate)
+        return latest
 
 
 class PriceService:
-    def __init__(self, fetcher: YFinanceFetcher | None = None):
-        self.fetcher = fetcher or YFinanceFetcher()
+    def __init__(self, fetcher: EvdsFetcher | None = None):
+        self.fetcher = fetcher or EvdsFetcher()
+
+    def get_rate(
+        self,
+        asset_code: str,
+        date: datetime.date | None = None,
+    ) -> Decimal:
+        if date is None:
+            return self.get_current_price(asset_code)
+        return self.get_historical_price(asset_code, date)
 
     def get_historical_price(self, asset_code: str, date: datetime.date) -> Decimal:
         asset_code = _require_asset_code(asset_code)
@@ -271,11 +347,11 @@ class PriceService:
         return price
 
     def get_current_price(self, asset_code: str) -> Decimal:
-        """Fetch the live market price; never reads or writes HistoricalPrice."""
+        """Fetch the latest TCMB rate; never reads or writes HistoricalPrice."""
         return self.fetcher.fetch_price(_require_asset_code(asset_code))
 
     def get_live_quote(self, asset_code: str) -> dict[str, Decimal | str]:
-        """Live price plus daily change versus previous close. No cache."""
+        """Latest TCMB rate plus change versus previous business day. No cache."""
         return self.fetcher.fetch_live_quote(_require_asset_code(asset_code))
 
 
