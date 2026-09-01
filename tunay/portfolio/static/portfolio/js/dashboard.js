@@ -5,7 +5,7 @@
         assets: '/portfolio/api/assets/',
     };
 
-    let monthlyPnlChart = null;
+    let weeklyPnlChart = null;
     let chartFilter = 'all';
     let historyFilter = 'all';
     let cachedTransactions = [];
@@ -88,19 +88,19 @@
         }
     }
 
-    function renderMonthlyPnlChart(payload) {
-        const canvas = document.getElementById('monthlyPnlChart');
+    function renderWeeklyPnlChart(payload) {
+        const canvas = document.getElementById('weeklyPnlChart');
         if (!canvas || typeof Chart === 'undefined') {
             return;
         }
-        const data = payload || { months: [], usd_pnl: [], ga_pnl: [] };
-        if (monthlyPnlChart) {
-            monthlyPnlChart.destroy();
+        const data = payload || { weeks: [], usd_pnl: [], ga_pnl: [] };
+        if (weeklyPnlChart) {
+            weeklyPnlChart.destroy();
         }
-        monthlyPnlChart = new Chart(canvas, {
+        weeklyPnlChart = new Chart(canvas, {
             type: 'line',
             data: {
-                labels: data.months || [],
+                labels: data.weeks || data.months || [],
                 datasets: [
                     {
                         label: 'ABD Doları',
@@ -152,14 +152,14 @@
     }
 
     function applyChartFilter(filter) {
-        if (!monthlyPnlChart) {
+        if (!weeklyPnlChart) {
             return;
         }
         const showUsd = filter === 'all' || filter === 'usd';
         const showGold = filter === 'all' || filter === 'gold';
-        monthlyPnlChart.setDatasetVisibility(0, showUsd);
-        monthlyPnlChart.setDatasetVisibility(1, showGold);
-        monthlyPnlChart.update();
+        weeklyPnlChart.setDatasetVisibility(0, showUsd);
+        weeklyPnlChart.setDatasetVisibility(1, showGold);
+        weeklyPnlChart.update();
     }
 
     function setActiveChartFilter(filter) {
@@ -266,7 +266,7 @@
             liveRates = rates;
             renderLiveRate('USD', rates.USD);
             renderLiveRate('GA', rates.GA);
-            renderMonthlyPnlChart(data.monthly_pnl);
+            renderWeeklyPnlChart(data.weekly_pnl);
             renderAssetSummary(cachedTransactions);
         });
     }

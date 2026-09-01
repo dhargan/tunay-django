@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import calendar
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -12,7 +11,6 @@ from evds import evdsAPI
 from tunay.portfolio.models import (
     AssetType,
     HistoricalPrice,
-    MonthlyPortfolioSnapshot,
     Transaction,
     TransactionType,
 )
@@ -22,6 +20,7 @@ GOLD_GRAM_SERIES = 'TP.MK.KUL.YTL'
 GOLD_ONS_USD_SERIES = 'TP.ALTINPIYASA.KAP03'
 TROY_OUNCE_GRAMS = Decimal('31.1034768')
 HISTORY_LOOKBACK_DAYS = 30
+EVDS_CHUNK_DAYS = 100
 PRICE_QUANTUM = Decimal('0.0001')
 MONEY_QUANTUM = Decimal('0.01')
 
@@ -225,6 +224,22 @@ class EvdsFetcher:
         previous_close = previous[1] if previous is not None else latest[1]
         return _quote_from_prices(latest[1], previous_close)
 
+    def fetch_rate_book(
+        self,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> dict[str, list[tuple[datetime.date, Decimal]]]:
+        start = _as_date(start) - datetime.timedelta(days=HISTORY_LOOKBACK_DAYS)
+        end = _as_date(end)
+        usd = self._fetch_series(USD_TRY_SERIES, start, end, frequency=2)
+        gold = self._gold_from_ons_and_usd(start, end, usd_rows=dict(usd))
+        if not gold:
+            gold = self._fetch_series(GOLD_GRAM_SERIES, start, end)
+        return {
+            AssetType.USD: usd,
+            AssetType.GA: gold,
+        }
+
     def _series_observations(
         self,
         asset_code: str,
@@ -242,8 +257,10 @@ class EvdsFetcher:
         self,
         start: datetime.date,
         as_of: datetime.date,
+        usd_rows: dict[datetime.date, Decimal] | None = None,
     ) -> list[tuple[datetime.date, Decimal]]:
-        usd_rows = dict(self._fetch_series(USD_TRY_SERIES, start, as_of, frequency=2))
+        if usd_rows is None:
+            usd_rows = dict(self._fetch_series(USD_TRY_SERIES, start, as_of, frequency=2))
         ons_rows = dict(
             self._fetch_series(GOLD_ONS_USD_SERIES, start, as_of, frequency=2)
         )
@@ -260,6 +277,29 @@ class EvdsFetcher:
         return combined
 
     def _fetch_series(
+        self,
+        series_code: str,
+        start: datetime.date,
+        end: datetime.date,
+        frequency: int | str = '',
+    ) -> list[tuple[datetime.date, Decimal]]:
+        if (end - start).days > EVDS_CHUNK_DAYS:
+            merged: dict[datetime.date, Decimal] = {}
+            cursor = start
+            while cursor <= end:
+                chunk_end = min(cursor + datetime.timedelta(days=EVDS_CHUNK_DAYS), end)
+                for day, rate in self._fetch_series_window(
+                    series_code,
+                    cursor,
+                    chunk_end,
+                    frequency,
+                ):
+                    merged[day] = rate
+                cursor = chunk_end + datetime.timedelta(days=1)
+            return sorted(merged.items())
+        return self._fetch_series_window(series_code, start, end, frequency)
+
+    def _fetch_series_window(
         self,
         series_code: str,
         start: datetime.date,
@@ -354,6 +394,14 @@ class PriceService:
         """Latest TCMB rate plus change versus previous business day. No cache."""
         return self.fetcher.fetch_live_quote(_require_asset_code(asset_code))
 
+    def get_rate_book(
+        self,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> dict[str, list[tuple[datetime.date, Decimal]]]:
+        """Bulk TCMB rates for [start, end]; not written to HistoricalPrice."""
+        return self.fetcher.fetch_rate_book(start, end)
+
 
 class TransactionService:
     def __init__(self, price_service: PriceService | None = None):
@@ -446,7 +494,6 @@ class TransactionService:
             realized_pnl=realized_pnl,
             transaction_date=transaction_date,
         )
-        self._refresh_monthly_snapshots()
         return created
 
     def update_transaction(
@@ -486,15 +533,10 @@ class TransactionService:
             transaction_type,
         )
         transaction.save()
-        self._refresh_monthly_snapshots()
         return transaction
 
     def delete_transaction(self, transaction: Transaction) -> None:
         transaction.delete()
-        self._refresh_monthly_snapshots()
-
-    def _refresh_monthly_snapshots(self) -> None:
-        PortfolioAnalyticsService(price_service=self.price_service).recalculate_monthly_snapshots()
 
 
 class PortfolioAnalyticsService:
@@ -603,99 +645,67 @@ class PortfolioAnalyticsService:
             'asset_breakdown': asset_breakdown,
         }
 
-    def get_monthly_pnl_breakdown(self) -> dict[str, list]:
-        snapshots = MonthlyPortfolioSnapshot.objects.order_by('year', 'month', 'asset_code')
-        by_month: dict[tuple[int, int], dict[str, float]] = {}
-        for snapshot in snapshots:
-            key = (snapshot.year, snapshot.month)
-            if key not in by_month:
-                by_month[key] = {'USD': 0.0, 'GA': 0.0}
-            by_month[key][snapshot.asset_code] = float(snapshot.pnl_try)
+    def generate_weekly_pnl(self) -> dict[str, list]:
+        transactions = list(Transaction.objects.order_by('transaction_date', 'id'))
+        empty = {'weeks': [], 'usd_pnl': [], 'ga_pnl': []}
+        if not transactions:
+            return empty
 
-        months = []
-        usd_pnl = []
-        ga_pnl = []
-        for year, month in by_month:
-            months.append(self._month_label(datetime.date(year, month, 1)))
-            usd_pnl.append(by_month[(year, month)]['USD'])
-            ga_pnl.append(by_month[(year, month)]['GA'])
+        today = timezone.localdate()
+        start = transactions[0].transaction_date
+        try:
+            rate_book = self.price_service.get_rate_book(start, today)
+        except PriceFetchError:
+            return empty
+
+        by_asset: dict[str, list[Transaction]] = {}
+        for transaction in transactions:
+            by_asset.setdefault(transaction.asset, []).append(transaction)
+
+        weeks: list[str] = []
+        usd_pnl: list[float] = []
+        ga_pnl: list[float] = []
+        for as_of in self._iso_week_ends(start, today):
+            weeks.append(self._week_label(as_of))
+            usd_pnl.append(
+                float(self._asset_pnl_as_of(by_asset.get(AssetType.USD, []), rate_book.get(AssetType.USD, []), as_of))
+            )
+            ga_pnl.append(
+                float(self._asset_pnl_as_of(by_asset.get(AssetType.GA, []), rate_book.get(AssetType.GA, []), as_of))
+            )
         return {
-            'months': months,
+            'weeks': weeks,
             'usd_pnl': usd_pnl,
             'ga_pnl': ga_pnl,
         }
 
-    def recalculate_monthly_snapshots(self) -> None:
-        MonthlyPortfolioSnapshot.objects.all().delete()
-        transactions = list(Transaction.objects.order_by('transaction_date', 'id'))
-        if not transactions:
-            return
-
-        today = timezone.localdate()
-        month_starts = self._month_range(
-            transactions[0].transaction_date.replace(day=1),
-            today.replace(day=1),
-        )
-        snapshots = []
-        for month_start in month_starts:
-            as_of = min(self._month_end(month_start), today)
-            for asset_code in AssetType.values:
-                rows = [
-                    transaction
-                    for transaction in transactions
-                    if transaction.asset == asset_code
-                    and transaction.transaction_date <= as_of
-                ]
-                total_amount, total_cost_try, realized = _replay_lots(
-                    rows,
-                    strict=False,
-                )
-                market_value_try = Decimal('0')
-                if total_amount:
-                    try:
-                        price = self.price_service.get_historical_price(asset_code, as_of)
-                    except PriceFetchError:
-                        price = Decimal('0')
-                    market_value_try = _to_decimal(total_amount * price, MONEY_QUANTUM)
-                total_cost_try = _to_decimal(total_cost_try, MONEY_QUANTUM)
-                unrealized = market_value_try - total_cost_try
-                snapshots.append(
-                    MonthlyPortfolioSnapshot(
-                        year=month_start.year,
-                        month=month_start.month,
-                        asset_code=asset_code,
-                        total_amount=_to_decimal(total_amount),
-                        total_cost_try=total_cost_try,
-                        market_value_try=market_value_try,
-                        pnl_try=_to_decimal(unrealized + realized, MONEY_QUANTUM),
-                    )
-                )
-        MonthlyPortfolioSnapshot.objects.bulk_create(snapshots)
+    def _asset_pnl_as_of(
+        self,
+        rows: list[Transaction],
+        observations: list[tuple[datetime.date, Decimal]],
+        as_of: datetime.date,
+    ) -> Decimal:
+        eligible = [row for row in rows if row.transaction_date <= as_of]
+        quantity, cost, realized = _replay_lots(eligible, strict=False)
+        quoted = EvdsFetcher._latest_on_or_before(observations, as_of)
+        price = quoted[1] if quoted is not None else Decimal('0')
+        market_value = _to_decimal(quantity * price, MONEY_QUANTUM) if quantity else Decimal('0')
+        return _to_decimal(market_value - cost + realized, MONEY_QUANTUM)
 
     @staticmethod
-    def _month_end(month_start: datetime.date) -> datetime.date:
-        last_day = calendar.monthrange(month_start.year, month_start.month)[1]
-        return month_start.replace(day=last_day)
+    def _iso_week_ends(start: datetime.date, end: datetime.date) -> list[datetime.date]:
+        week_end = start + datetime.timedelta(days=6 - start.weekday())
+        ends = []
+        while True:
+            ends.append(min(week_end, end))
+            if week_end >= end:
+                break
+            week_end += datetime.timedelta(days=7)
+        return ends
 
     @staticmethod
-    def _month_range(start: datetime.date, end: datetime.date) -> list[datetime.date]:
-        months = []
-        current = start
-        while current <= end:
-            months.append(current)
-            if current.month == 12:
-                current = datetime.date(current.year + 1, 1, 1)
-            else:
-                current = datetime.date(current.year, current.month + 1, 1)
-        return months
-
-    @staticmethod
-    def _month_label(month_start: datetime.date) -> str:
-        names = (
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-        )
-        return f'{names[month_start.month - 1]} {month_start.year}'
+    def _week_label(week_end: datetime.date) -> str:
+        return week_end.strftime('%d.%m.%Y')
 
     @staticmethod
     def _pnl_percentage(pnl_try: Decimal, invested: Decimal) -> Decimal:

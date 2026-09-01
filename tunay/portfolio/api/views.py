@@ -39,7 +39,7 @@ class DashboardAPIView(APIView):
         analytics = PortfolioAnalyticsService()
         metrics = dict(EMPTY_KPI)
         metrics['live_rates'] = {}
-        metrics['monthly_pnl'] = {'months': [], 'usd_pnl': [], 'ga_pnl': []}
+        metrics['weekly_pnl'] = {'weeks': [], 'usd_pnl': [], 'ga_pnl': []}
 
         try:
             metrics.update(analytics.calculate_cumulative_pnl())
@@ -55,9 +55,9 @@ class DashboardAPIView(APIView):
             logger.exception('Dashboard live rates failed')
 
         try:
-            metrics['monthly_pnl'] = analytics.get_monthly_pnl_breakdown()
+            metrics['weekly_pnl'] = analytics.generate_weekly_pnl()
         except Exception:
-            logger.exception('Dashboard monthly PnL failed')
+            logger.exception('Dashboard weekly PnL failed')
 
         return Response(metrics)
 
