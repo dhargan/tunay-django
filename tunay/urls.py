@@ -35,4 +35,5 @@ urlpatterns = [
     path('pixel-tarot/', pixel_views.index),  # pixel-tarot app'i için view
     path('api/pixel-tarot/', include('tunay.pixel_tarot.api.urls')),  # Pixel Tarot API
     path('portfolio/', include('tunay.portfolio.urls')),
+    path('geoplate/', include('tunay.geoplate.urls')),  # Plaka kodu tahmin oyunu
 ]

@@ -1,0 +1,193 @@
+:root {
+    --geoplate-bg: #0f1720;
+    --geoplate-panel: #17222e;
+    --geoplate-border: rgba(255, 255, 255, 0.08);
+    --geoplate-accent: #ffd54a;
+    --geoplate-province: #2c3e50;
+    --geoplate-province-hover: #3d6ea5;
+}
+
+body.geoplate-app {
+    background: var(--geoplate-bg);
+    color: #e9eef4;
+    font-family: 'Quicksand', system-ui, sans-serif;
+    min-height: 100vh;
+}
+
+.geoplate-topbar {
+    background: linear-gradient(90deg, #131c26 0%, #1b2836 100%);
+    border-bottom: 1px solid var(--geoplate-border);
+}
+
+.brand-mark {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--geoplate-accent);
+    color: #1a1a1a;
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+}
+
+.brand-title {
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.9rem;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: #fff;
+}
+
+.brand-subtitle {
+    font-size: 0.82rem;
+    color: #93a4b7;
+    letter-spacing: 0.5px;
+}
+
+.mode-switch .form-check-input {
+    background-color: #263544;
+    border-color: var(--geoplate-border);
+}
+
+.mode-switch .form-check-input:checked {
+    background-color: #e0533d;
+    border-color: #e0533d;
+}
+
+.mode-badge {
+    background: #22303e;
+    color: #cfe0f0;
+    border: 1px solid var(--geoplate-border);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.mode-badge.hard {
+    background: #3a1f1c;
+    color: #ffb4a6;
+    border-color: rgba(224, 83, 61, 0.5);
+}
+
+.panel {
+    background: var(--geoplate-panel);
+    border: 1px solid var(--geoplate-border);
+    border-radius: 14px;
+    padding: 1.25rem;
+}
+
+.panel-map {
+    padding: 0.5rem;
+}
+
+.panel-label {
+    font-size: 0.85rem;
+    color: #93a4b7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.plate {
+    margin: 0.75rem 0 1rem;
+    padding: 0.6rem 0.5rem;
+    background: #f4f6f8;
+    color: #14212e;
+    border: 3px solid #101820;
+    border-radius: 8px;
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 3.4rem;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: 4px;
+}
+
+.feedback {
+    min-height: 3rem;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    border-radius: 10px;
+    padding: 0.6rem;
+    background: #1e2b39;
+    color: #b9c9da;
+    font-weight: 600;
+}
+
+.feedback.correct {
+    background: rgba(40, 167, 69, 0.18);
+    color: #7ee2a0;
+}
+
+.feedback.wrong {
+    background: rgba(220, 53, 69, 0.18);
+    color: #ff9a9a;
+}
+
+.score-row {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.score-label {
+    font-size: 0.75rem;
+    color: #93a4b7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.score-value {
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.btn-skip {
+    background: #2b3b4c;
+    color: #e9eef4;
+    border: 1px solid var(--geoplate-border);
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.btn-skip:hover {
+    background: #35485c;
+    color: #fff;
+}
+
+#map {
+    height: 68vh;
+    min-height: 420px;
+    border-radius: 10px;
+    background: #0c141c;
+}
+
+.leaflet-container {
+    background: #0c141c;
+    outline: none;
+}
+
+.province-tooltip {
+    background: #101820;
+    border: 1px solid var(--geoplate-accent);
+    color: #ffe89a;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.province-tooltip::before {
+    border-top-color: var(--geoplate-accent);
+}
+
+@media (max-width: 991.98px) {
+    #map {
+        height: 55vh;
+    }
+}
