@@ -7,14 +7,14 @@
     'use strict';
 
     var STYLE_DEFAULT = {
-        color: '#0f1720',
+        color: '#ffffff',
         weight: 1,
-        fillColor: '#2c3e50',
-        fillOpacity: 0.95
+        fillColor: '#b79cbb',
+        fillOpacity: 0.9
     };
-    var STYLE_HOVER = { fillColor: '#3d6ea5', weight: 2, color: '#ffd54a' };
-    var STYLE_CORRECT = { fillColor: '#28a745', weight: 2, color: '#7ee2a0' };
-    var STYLE_WRONG = { fillColor: '#c0392b', weight: 2, color: '#ff9a9a' };
+    var STYLE_HOVER = { fillColor: '#8b6b8f', weight: 2, color: '#ffd700' };
+    var STYLE_CORRECT = { fillColor: '#4caf50', weight: 2, color: '#2e7d32' };
+    var STYLE_WRONG = { fillColor: '#d9534f', weight: 2, color: '#c0392b' };
 
     var FLASH_MS = 700;
     var NEXT_PLATE_DELAY_MS = 1100;
