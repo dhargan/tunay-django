@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'tunay.home',
     'tunay.pixel_tarot',
     'tunay.portfolio',
+    'tunay.geoplate',
     'rest_framework',
 ]
 
@@ -147,5 +148,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '20/minute',
         'user': '60/minute',
+        # Geoplate fires one request per map click, so it needs a looser budget.
+        'geoplate': '240/minute',
     },
 }

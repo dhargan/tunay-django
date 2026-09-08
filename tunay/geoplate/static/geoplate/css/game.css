@@ -1,0 +1,238 @@
+:root {
+    --geoplate-purple: #8b6b8f;
+    --geoplate-purple-soft: #b79cbb;
+    --geoplate-gold: #ffd700;
+    --geoplate-bg: #f5f5f5;
+    --geoplate-map-bg: #eef0f2;
+}
+
+body.geoplate-app {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--geoplate-bg);
+    color: #333;
+    min-height: 100vh;
+}
+
+.geoplate-topbar {
+    background-color: var(--geoplate-purple);
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+}
+
+.brand-mark {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #fff;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    color: var(--geoplate-purple);
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+}
+
+.brand-title {
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 4px;
+    line-height: 1;
+    color: #fff;
+}
+
+.brand-title .highlight {
+    color: var(--geoplate-gold);
+}
+
+.brand-subtitle {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.mode-switch {
+    font-family: 'Quicksand', sans-serif;
+    color: #fff;
+    font-weight: 500;
+}
+
+.mode-switch .form-check-input {
+    background-color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: none;
+}
+
+.mode-switch .form-check-input:checked {
+    background-color: var(--geoplate-gold);
+    border-color: var(--geoplate-gold);
+}
+
+.mode-badge {
+    background: #fff;
+    color: var(--geoplate-purple);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: 0.5rem 0.75rem;
+}
+
+.mode-badge.hard {
+    background: var(--geoplate-gold);
+    color: #5d4a1f;
+}
+
+.panel {
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+}
+
+.panel-map {
+    padding: 0.75rem;
+}
+
+.panel-label {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+.plate {
+    margin: 0.75rem 0 1rem;
+    padding: 0.6rem 0.5rem;
+    background: #fff;
+    color: #333;
+    border: 3px solid var(--geoplate-purple);
+    border-radius: 10px;
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 3.4rem;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: 4px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.08);
+}
+
+.feedback {
+    min-height: 3rem;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    border-radius: 10px;
+    padding: 0.6rem;
+    background: #f8f9fa;
+    color: #666;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+}
+
+.feedback.correct {
+    background: #e8f6ec;
+    color: #2e7d32;
+}
+
+.feedback.wrong {
+    background: #fdecea;
+    color: #c0392b;
+}
+
+.score-row {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.score-label {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.score-value {
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.btn-skip {
+    background: var(--geoplate-purple);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.btn-skip:hover {
+    background: #75585a;
+    color: var(--geoplate-gold);
+}
+
+#map {
+    height: 68vh;
+    min-height: 420px;
+    border-radius: 10px;
+    background: var(--geoplate-map-bg);
+}
+
+.leaflet-container {
+    background: var(--geoplate-map-bg);
+    outline: none;
+}
+
+.province-tooltip {
+    background: #fff;
+    border: 1px solid var(--geoplate-purple);
+    border-radius: 8px;
+    color: var(--geoplate-purple);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.12);
+}
+
+.province-tooltip::before {
+    border-top-color: var(--geoplate-purple);
+}
+
+.josefin-sans-txt {
+    font-family: 'Josefin Sans', sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 100;
+    font-style: normal;
+}
+
+.quicksand-txt {
+    font-family: 'Quicksand', sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+@media (max-width: 991.98px) {
+    #map {
+        height: 55vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .brand-title {
+        font-size: 1.6rem;
+    }
+
+    .panel {
+        padding: 1rem;
+    }
+}
