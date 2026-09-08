@@ -119,6 +119,25 @@ body.geoplate-app {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.08);
 }
 
+.attempts {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 0.85rem;
+    font-size: 1.15rem;
+    min-height: 1.4rem;
+}
+
+.attempts i {
+    color: var(--geoplate-purple);
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.attempts i.spent {
+    color: #d6d6d6;
+    transform: scale(0.85);
+}
+
 .feedback {
     min-height: 3rem;
     display: grid;

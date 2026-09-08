@@ -42,8 +42,9 @@
                 <div class="panel h-100 d-flex flex-column">
                     <div class="panel-label">Bu plaka kodu hangi ile ait?</div>
                     <div class="plate" id="plateDisplay">{{ city.formatted_plate_code }}</div>
+                    <div class="attempts" id="attempts" aria-label="Kalan hak"></div>
                     <div class="feedback" id="feedback" role="status" aria-live="polite">
-                        Haritadan bir il seç.
+                        Haritadan bir il seç. {{ max_attempts }} hakkın var.
                     </div>
                     <div class="score-row">
                         <div>
@@ -51,7 +52,7 @@
                             <div class="score-value text-success" id="correctCount">0</div>
                         </div>
                         <div>
-                            <div class="score-label">Yanlış</div>
+                            <div class="score-label">Bilemedin</div>
                             <div class="score-value text-danger" id="wrongCount">0</div>
                         </div>
                     </div>
@@ -66,7 +67,8 @@
                          data-geojson-url="{% static 'geoplate/geojson/tr-cities-with-plate.json' %}"
                          data-check-answer-url="{% url 'geoplate:geoplate-check-answer' %}"
                          data-random-plate-url="{% url 'geoplate:geoplate-random-plate' %}"
-                         data-plate-code="{{ city.plate_code }}"></div>
+                         data-plate-code="{{ city.plate_code }}"
+                         data-max-attempts="{{ max_attempts }}"></div>
                 </div>
             </div>
         </div>

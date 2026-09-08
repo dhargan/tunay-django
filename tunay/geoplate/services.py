@@ -5,6 +5,9 @@ from tunay.geoplate.models import City
 MIN_PLATE_CODE = 1
 MAX_PLATE_CODE = 81
 
+# Wrong guesses allowed per plate code before the answer is revealed.
+MAX_ATTEMPTS = 3
+
 
 def pick_random_city(exclude_plate_code=None):
     """Return a random City, optionally avoiding the one already on screen."""
@@ -28,3 +31,12 @@ def parse_plate_code(value):
     if not MIN_PLATE_CODE <= plate_code <= MAX_PLATE_CODE:
         return None
     return plate_code
+
+
+def parse_attempt(value):
+    """Return the 1-based attempt number, clamped to the allowed range."""
+    try:
+        attempt = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return min(max(attempt, 1), MAX_ATTEMPTS)
