@@ -212,6 +212,18 @@ body.geoplate-app {
     outline: none;
 }
 
+/* Clicking a province focuses its SVG path, which browsers mark with a black
+   focus rectangle. Keep it only for keyboard navigation. */
+.leaflet-container path.leaflet-interactive:focus,
+.leaflet-interactive:focus {
+    outline: none;
+}
+
+.leaflet-container path.leaflet-interactive:focus-visible {
+    outline: 2px solid var(--geoplate-gold);
+    outline-offset: 2px;
+}
+
 .province-tooltip {
     background: #fff;
     border: 1px solid var(--geoplate-purple);
